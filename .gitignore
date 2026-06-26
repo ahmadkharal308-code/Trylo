@@ -28,3 +28,6 @@ npm-debug.log*
 
 # Temp text extracted from the spec PDFs (working files only)
 scratch_*.txt
+
+# Uploaded seller documents (CNIC photos, business proofs) — local disk only for now
+apps/backend/uploads/

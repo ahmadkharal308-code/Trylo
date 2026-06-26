@@ -247,6 +247,8 @@ model Seller {
   businessProofUrl   String?
   phoneVerified      Boolean            @default(false)
   verifiedAt         DateTime?
+  /// Populated when admin rejects an application, so the reason is on record.
+  rejectionReason    String?
 
   // --- Gate 2: ongoing reputation metrics (spec Section 2) ---
   // Cached aggregates that influence ranking; recomputed as reviews/orders flow in.
