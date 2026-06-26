@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Trylo — try it before you trust it</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FBF6EF; --cream-deep:#F3ECE1; --ink:#2B2422; --ink-soft:#5C5048;
+    --maroon:#8B2942; --maroon-deep:#6E1F34; --gold:#C9A04D; --sage:#7A8B6F;
+    --line:#E3D9C8; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream); font-family:'Manrope',sans-serif; color:var(--ink);
+    -webkit-font-smoothing:antialiased; overscroll-behavior:none;
+  }
+  .stage{
+    max-width:430px; margin:0 auto; min-height:100vh; background:var(--cream);
+    position:relative; display:flex; flex-direction:column;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between; padding:18px 22px 10px;
+  }
+  .wordmark{
+    font-family:'Fraunces',serif; font-weight:600; font-size:22px;
+    color:var(--maroon-deep); letter-spacing:0.2px; cursor:pointer;
+  }
+  .wordmark span{ color:var(--gold); }
+  .tagline{
+    font-size:11px; color:var(--ink-soft); letter-spacing:0.04em;
+    text-transform:uppercase; margin-top:2px;
+  }
+  .demo-pill{
+    font-size:10.5px; letter-spacing:0.04em; text-transform:uppercase;
+    color:var(--maroon-deep); background:rgba(139,41,66,0.08);
+    border:1px solid rgba(139,41,66,0.25); border-radius:20px;
+    padding:5px 12px; white-space:nowrap;
+  }
+  /* Department toggle */
+  .dept-toggle{
+    display:flex; gap:0; margin:0 22px 4px; background:var(--cream-deep);
+    border:1px solid var(--line); border-radius:24px; padding:4px; position:relative;
+  }
+  .dept-toggle button{
+    flex:1; border:none; background:transparent; font-family:'Manrope',sans-serif;
+    font-size:13.5px; font-weight:600; color:var(--ink-soft); padding:9px 0;
+    border-radius:20px; cursor:pointer; z-index:2; transition:color 0.25s ease;
+  }
+  .dept-toggle button.active{ color:var(--cream); }
+  .dept-glider{
+    position:absolute; top:4px; bottom:4px; width:calc(50% - 4px);
+    background:var(--maroon-deep); border-radius:20px; z-index:1;
+    transition:transform 0.28s cubic-bezier(.4,0,.2,1);
+  }
+  .dept-glider.men{ transform:translateX(100%); }
+  .screen{ flex:1; display:none; flex-direction:column; padding:8px 22px 28px; }
+  .screen.active{ display:flex; }
+
+  /* HOME */
+  .hero{ margin:18px 0 22px; }
+  .hero h1{ font-family:'Fraunces',serif; font-weight:500; font-size:30px; line-height:1.15; margin:0 0 8px; }
+  .hero h1 em{ font-style:italic; color:var(--maroon-deep); }
+  .hero p{ font-size:14px; color:var(--ink-soft); margin:0; line-height:1.55; }
+  .search-wrap{ position:relative; margin-bottom:8px; }
+  .search-shell{
+    background:var(--white); border:1px solid var(--line); border-radius:30px;
+    padding:6px 6px 6px 18px; display:flex; align-items:center; gap:10px;
+    box-shadow:0 12px 22px rgba(43,36,34,0.06);
+  }
+  .search-shell.has-suggest{ border-radius:18px 18px 4px 4px; }
+  .search-shell svg{ width:18px; height:18px; stroke:var(--ink-soft); flex-shrink:0; }
+  .search-shell input{
+    flex:1; border:none; outline:none; background:transparent;
+    font-family:'Manrope',sans-serif; font-size:15px; color:var(--ink); padding:10px 0;
+  }
+  .search-shell input::placeholder{ color:var(--ink-soft); opacity:0.75; }
+  .search-go{
+    background:var(--maroon-deep); color:var(--cream); border:none; border-radius:24px;
+    padding:10px 18px; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .search-go:disabled{ opacity:0.45; }
+  .autocomplete{
+    position:absolute; top:100%; left:0; right:0; background:var(--white);
+    border:1px solid var(--line); border-top:none; border-radius:0 0 18px 18px;
+    box-shadow:0 14px 24px rgba(43,36,34,0.10); overflow:hidden; z-index:50; display:none;
+    max-height:320px; overflow-y:auto;
+  }
+  .autocomplete.on{ display:block; }
+  .ac-item{
+    padding:10px 18px; font-size:14px; color:var(--ink); cursor:pointer;
+    display:flex; align-items:center; gap:10px; border-top:1px solid rgba(227,217,200,0.5);
+  }
+  .ac-item:first-child{ border-top:none; }
+  .ac-item:hover{ background:var(--cream-deep); }
+  .ac-item .ac-cat{
+    font-size:10.5px; text-transform:uppercase; letter-spacing:0.05em;
+    color:var(--ink-soft); margin-left:auto;
+  }
+  .ac-item .ac-mark{ color:var(--maroon-deep); font-weight:600; }
+  .search-help{ font-size:11.5px; color:var(--ink-soft); margin:6px 4px 16px; }
+  .browse-label{
+    font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--maroon-deep); font-weight:700; margin:4px 0 10px;
+  }
+  .suggest-row{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:22px; }
+  .suggest-chip{
+    background:rgba(201,160,77,0.10); border:1px solid rgba(201,160,77,0.35);
+    border-radius:20px; padding:7px 14px; font-size:12.5px; color:var(--ink); cursor:pointer;
+  }
+  .suggest-chip:hover{ background:rgba(201,160,77,0.18); }
+  .home-block{
+    background:rgba(139,41,66,0.04); border-left:3px solid var(--maroon-deep);
+    padding:14px 16px; border-radius:0 12px 12px 0;
+  }
+  .home-block strong{
+    display:block; font-family:'Fraunces',serif; font-size:15px; margin-bottom:4px; color:var(--maroon-deep);
+  }
+  .home-block span{ font-size:13px; color:var(--ink-soft); line-height:1.5; }
+  .home-foot{ margin-top:auto; padding-top:24px; text-align:center; font-size:11.5px; color:var(--ink-soft); opacity:0.8; }
+
+  /* SWIPE */
+  .swipe-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .back-btn{
+    background:none; border:none; font-size:13px; color:var(--ink-soft);
+    display:flex; align-items:center; gap:5px; cursor:pointer; padding:4px 0;
+  }
+  .back-btn svg{ width:14px; height:14px; }
+  .skip-btn{
+    background:none; border:1px solid var(--line); border-radius:18px;
+    font-size:12px; color:var(--ink-soft); padding:6px 13px; cursor:pointer;
+    display:flex; align-items:center; gap:5px;
+  }
+  .skip-btn svg{ width:13px; height:13px; }
+  .skip-btn:active{ background:var(--cream-deep); }
+  .section-label{
+    font-size:11px; letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--maroon-deep); font-weight:700; margin:6px 0 2px;
+  }
+  .section-title{
+    font-family:'Fraunces',serif; font-size:20px; font-weight:500; margin:0 0 6px; color:var(--ink);
+  }
+  .stage-blurb{ font-size:12.5px; color:var(--ink-soft); margin:0 0 10px; line-height:1.55; }
+  .progress-track{ display:flex; gap:4px; margin:8px 0 14px; }
+  .progress-track div{ flex:1; height:3px; background:var(--line); border-radius:2px; transition:background 0.3s ease; }
+  .progress-track div.benchmark.done{ background:var(--maroon-deep); }
+  .progress-track div.confirm.done{ background:var(--gold); }
+  .progress-track div.current{ background:var(--ink); }
+  .deck-wrap{ position:relative; flex:1; min-height:430px; display:flex; align-items:flex-start; justify-content:center; }
+  .card{
+    position:absolute; width:100%; max-width:340px; background:var(--white);
+    border-radius:22px; border:1px solid var(--line);
+    box-shadow:0 18px 34px rgba(43,36,34,0.10); overflow:hidden;
+    user-select:none; touch-action:none;
+    transition:transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease;
+  }
+  .card-art{ width:100%; height:300px; position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+  .card-art svg{ width:84%; height:96%; }
+  .verified-badge{
+    position:absolute; top:12px; left:12px; display:flex; align-items:center; gap:5px;
+    background:rgba(255,255,255,0.92); border-radius:20px; padding:5px 10px 5px 8px;
+    font-size:10.5px; font-weight:600; color:var(--sage); border:1px solid rgba(122,139,111,0.3);
+  }
+  .verified-badge svg{ width:13px; height:13px; }
+  .stamp{
+    position:absolute; top:14px; right:-34px; transform:rotate(28deg);
+    font-size:11px; font-weight:700; letter-spacing:0.06em; padding:5px 38px;
+    text-transform:uppercase; display:none;
+  }
+  .stamp.like{ background:rgba(122,139,111,0.92); color:#fff; }
+  .stamp.nope{ background:rgba(139,41,66,0.92); color:#fff; }
+  .card-info{ padding:16px 18px 18px; }
+  .seller-row{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  .seller-name{ font-size:12px; color:var(--ink-soft); }
+  .seller-rating{ font-size:12px; color:var(--gold); font-weight:700; }
+  .product-name{ font-family:'Fraunces',serif; font-size:17px; font-weight:500; margin:0 0 4px; line-height:1.25; }
+  .product-meta{ font-size:12.5px; color:var(--ink-soft); margin:0; }
+  .price{ font-weight:700; color:var(--maroon-deep); }
+  .swipe-controls{ display:flex; justify-content:center; gap:30px; margin-top:20px; }
+  .ctrl-btn{
+    width:54px; height:54px; border-radius:50%; border:1.5px solid var(--line);
+    background:var(--white); display:flex; align-items:center; justify-content:center;
+    cursor:pointer; box-shadow:0 6px 14px rgba(43,36,34,0.08);
+  }
+  .ctrl-btn svg{ width:22px; height:22px; }
+  .ctrl-btn.nope svg{ stroke:var(--maroon-deep); fill:none; }
+  .ctrl-btn.like svg{ stroke:var(--sage); fill:none; }
+  .ctrl-btn:active{ transform:scale(0.94); }
+  .swipe-hint{ text-align:center; font-size:11.5px; color:var(--ink-soft); margin-top:14px; opacity:0.85; }
+
+  .phase-toast{
+    position:absolute; top:14px; left:50%; transform:translateX(-50%) translateY(-20px);
+    opacity:0; background:var(--ink); color:var(--cream); border-radius:24px;
+    padding:9px 16px; font-size:12px; box-shadow:0 10px 24px rgba(0,0,0,0.18);
+    z-index:60; pointer-events:none; transition:opacity 0.3s ease, transform 0.4s ease;
+    white-space:nowrap; max-width:90vw; text-align:center;
+  }
+  .phase-toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  /* LEARNING */
+  #screen-learning{ align-items:center; justify-content:center; text-align:center; }
+  .learning-circle{
+    width:100px; height:100px; border-radius:50%; border:3px solid var(--cream-deep);
+    border-top-color:var(--maroon-deep); border-right-color:var(--gold);
+    animation:spin 1.2s linear infinite; margin:0 0 28px;
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .learning-title{ font-family:'Fraunces',serif; font-size:24px; font-weight:500; margin:0 0 10px; color:var(--maroon-deep); }
+  .learning-sub{ font-size:14px; line-height:1.6; color:var(--ink-soft); max-width:300px; margin:0 0 24px; }
+  .learning-list{
+    background:var(--white); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; width:100%; max-width:300px; text-align:left;
+  }
+  .learning-list div{ display:flex; align-items:flex-start; gap:10px; padding:5px 0; font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
+  .learning-list div b{ color:var(--ink); font-weight:600; }
+  .learning-list svg{ width:14px; height:14px; stroke:var(--sage); flex-shrink:0; margin-top:3px; }
+
+  /* RESULTS */
+  .results-intro{
+    background:rgba(122,139,111,0.10); border:1px solid rgba(122,139,111,0.30);
+    border-radius:14px; padding:14px 16px; margin-bottom:18px;
+  }
+  .results-intro b{ font-family:'Fraunces',serif; font-size:14.5px; color:var(--sage); display:block; margin-bottom:4px; }
+  .results-intro p{ margin:0; font-size:13px; color:var(--ink-soft); line-height:1.55; }
+  .results-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .result-card{
+    background:var(--white); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; cursor:pointer; transition:transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .result-card:hover{ transform:translateY(-2px); box-shadow:0 12px 20px rgba(43,36,34,0.10); }
+  .result-art{ height:150px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .result-art svg{ width:84%; height:94%; }
+  .result-art .match{
+    position:absolute; top:8px; right:8px; background:rgba(139,41,66,0.92);
+    color:var(--cream); font-size:10px; font-weight:700; padding:3px 8px; border-radius:20px;
+  }
+  .result-info{ padding:10px 12px 12px; }
+  .result-info p{ font-family:'Fraunces',serif; font-size:13.5px; margin:0 0 3px; line-height:1.25; color:var(--ink); }
+  .result-info span{ font-size:11px; color:var(--ink-soft); }
+  .result-info .rprice{ font-size:12px; font-weight:700; color:var(--maroon-deep); display:block; margin-top:3px; }
+  .reset-link{ text-align:center; margin-top:6px; font-size:12px; color:var(--ink-soft); cursor:pointer; text-decoration:underline; text-underline-offset:3px; }
+
+  /* PRODUCT */
+  .pd-art{ width:100%; background:var(--white); border:1px solid var(--line); border-radius:18px; padding:14px; margin-bottom:16px; position:relative; }
+  .pd-art-frame{ height:300px; display:flex; align-items:center; justify-content:center; background:var(--cream-deep); border-radius:12px; position:relative; overflow:hidden; }
+  .pd-art-frame svg{ width:84%; height:96%; position:absolute; transition:opacity 0.7s ease; }
+  .pd-seller{
+    background:rgba(122,139,111,0.10); border:1px solid rgba(122,139,111,0.25);
+    border-radius:12px; padding:10px 14px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .pd-seller-left b{ display:block; font-size:13px; color:var(--ink); margin-bottom:2px; }
+  .pd-seller-left span{ font-size:11px; color:var(--ink-soft); display:flex; align-items:center; gap:5px; }
+  .pd-seller-left svg{ width:11px; height:11px; stroke:var(--sage); }
+  .pd-seller-right{ text-align:right; font-size:11.5px; color:var(--ink-soft); }
+  .pd-seller-right b{ color:var(--gold); font-size:13px; }
+  .pd-name{ font-family:'Fraunces',serif; font-size:22px; font-weight:500; margin:0 0 6px; line-height:1.2; }
+  .pd-meta{ font-size:13px; color:var(--ink-soft); margin:0 0 10px; }
+  .pd-price{ font-size:20px; font-weight:700; color:var(--maroon-deep); margin:0 0 16px; }
+  .pd-actions{ display:flex; gap:10px; margin-bottom:16px; }
+  .pd-actions .tryon{
+    flex:1; background:var(--maroon-deep); color:var(--cream); border:none; border-radius:26px;
+    padding:14px 0; font-weight:600; font-size:13.5px; cursor:pointer; display:flex;
+    align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 16px rgba(110,31,52,0.20);
+  }
+  .pd-actions .tryon svg{ width:16px; height:16px; }
+  .pd-actions .buy{
+    flex:1; background:transparent; color:var(--ink); border:1.5px solid var(--line);
+    border-radius:26px; padding:14px 0; font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+  .pd-tag{
+    display:none; text-align:center; font-size:10px; letter-spacing:0.05em;
+    text-transform:uppercase; color:var(--gold); background:rgba(201,160,77,0.12);
+    border:1px solid rgba(201,160,77,0.35); border-radius:20px; padding:5px 12px;
+    margin:0 auto 12px; width:fit-content;
+  }
+  .privacy-note{
+    display:flex; align-items:flex-start; gap:8px; background:rgba(122,139,111,0.08);
+    border:1px solid rgba(122,139,111,0.25); border-radius:12px; padding:10px 12px; margin-bottom:14px;
+  }
+  .privacy-note svg{ width:15px; height:15px; stroke:var(--sage); flex-shrink:0; margin-top:1px; }
+  .privacy-note p{ font-size:11.5px; line-height:1.5; color:var(--ink-soft); margin:0; }
+  .pd-loading{
+    position:absolute; inset:14px; background:rgba(243,236,225,0.85); backdrop-filter:blur(2px);
+    border-radius:12px; display:none; flex-direction:column; align-items:center; justify-content:center; gap:10px; z-index:5;
+  }
+  .pd-loading.on{ display:flex; }
+  .pd-loading .ring{ width:36px; height:36px; border-radius:50%; border:3px solid var(--cream-deep); border-top-color:var(--maroon-deep); animation:spin 1s linear infinite; }
+  .pd-loading span{ font-size:12px; color:var(--ink-soft); }
+
+  /* MORE LIKE THIS */
+  .more-rail{ margin-top:8px; }
+  .more-rail-head{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px; }
+  .more-rail-head h3{ font-family:'Fraunces',serif; font-size:15.5px; font-weight:500; margin:0; color:var(--ink); }
+  .more-rail-head span{ font-size:11px; color:var(--ink-soft); }
+  .more-scroll{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .more-scroll::-webkit-scrollbar{ display:none; }
+  .more-card{ flex:0 0 124px; background:var(--white); border:1px solid var(--line); border-radius:12px; overflow:hidden; cursor:pointer; }
+  .more-art{ height:104px; display:flex; align-items:center; justify-content:center; }
+  .more-art svg{ width:82%; height:92%; }
+  .more-info{ padding:8px 9px 10px; }
+  .more-info p{ font-family:'Fraunces',serif; font-size:11.5px; margin:0 0 2px; line-height:1.25; color:var(--ink); }
+  .more-info span{ font-size:10.5px; font-weight:700; color:var(--maroon-deep); }
+  .more-why{ font-size:10px; color:var(--sage); margin-top:2px; display:block; font-style:italic; }
+
+  /* REACTION PULSE */
+  .reaction-pulse{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(80px);
+    max-width:386px; width:calc(100% - 44px); background:var(--ink); color:var(--cream);
+    border-radius:18px; padding:14px 16px; box-shadow:0 16px 32px rgba(0,0,0,0.25);
+    z-index:200; opacity:0; transition:transform 0.4s cubic-bezier(.22,1,.36,1), opacity 0.4s ease; pointer-events:none;
+  }
+  .reaction-pulse.on{ transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
+  .reaction-pulse p{ margin:0 0 10px; font-size:13px; line-height:1.4; }
+  .reaction-row{ display:flex; gap:8px; }
+  .reaction-row button{
+    flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.25);
+    color:var(--cream); border-radius:12px; padding:9px 6px; font-size:12px; font-weight:600;
+    cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px;
+  }
+  .reaction-row button span{ font-size:17px; }
+  .reaction-row button:active{ background:rgba(255,255,255,0.22); }
+  .reaction-skip{ text-align:center; margin-top:8px; font-size:11px; color:rgba(255,255,255,0.55); cursor:pointer; }
+
+  /* FEEDBACK */
+  #screen-feedback{ padding-top:6px; }
+  .fb-head{ margin:10px 0 20px; }
+  .fb-head h2{ font-family:'Fraunces',serif; font-size:23px; font-weight:500; margin:0 0 8px; color:var(--ink); }
+  .fb-head p{ font-size:13.5px; color:var(--ink-soft); line-height:1.55; margin:0; }
+  .fb-block{ margin-bottom:24px; }
+  .fb-q{ font-size:13.5px; font-weight:600; color:var(--ink); margin-bottom:10px; display:block; }
+  .fb-scale{ display:flex; gap:8px; }
+  .fb-scale button{ flex:1; border:1.5px solid var(--line); background:var(--white); border-radius:12px; padding:12px 4px; font-size:18px; cursor:pointer; transition:border-color 0.15s ease, background 0.15s ease; }
+  .fb-scale button.sel{ border-color:var(--maroon-deep); background:rgba(139,41,66,0.08); }
+  .fb-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  .fb-chip{ border:1.5px solid var(--line); background:var(--white); border-radius:20px; padding:9px 15px; font-size:12.5px; cursor:pointer; color:var(--ink); }
+  .fb-chip.sel{ border-color:var(--maroon-deep); background:var(--maroon-deep); color:var(--cream); }
+  .fb-textarea{ width:100%; border:1.5px solid var(--line); border-radius:14px; padding:12px 14px; font-family:'Manrope',sans-serif; font-size:13.5px; color:var(--ink); resize:none; min-height:80px; background:var(--white); }
+  .fb-textarea:focus{ outline:none; border-color:var(--maroon-deep); }
+  .fb-submit{ background:var(--maroon-deep); color:var(--cream); border:none; border-radius:28px; padding:15px 0; width:100%; font-weight:600; font-size:14.5px; cursor:pointer; box-shadow:0 8px 20px rgba(110,31,52,0.22); }
+  .fb-skip{ text-align:center; margin-top:14px; font-size:12px; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+
+  /* THANKS */
+  #screen-thanks{ align-items:center; justify-content:center; text-align:center; }
+  .thanks-mark{ width:64px; height:64px; border-radius:50%; background:rgba(122,139,111,0.15); display:flex; align-items:center; justify-content:center; margin-bottom:20px; }
+  .thanks-mark svg{ width:30px; height:30px; stroke:var(--sage); }
+  .thanks-title{ font-family:'Fraunces',serif; font-size:23px; font-weight:500; margin:0 0 10px; color:var(--ink); }
+  .thanks-sub{ font-size:13.5px; color:var(--ink-soft); line-height:1.6; max-width:280px; margin:0 0 26px; }
+  .data-toggle{ font-size:11.5px; color:var(--ink-soft); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+  .data-panel{ display:none; margin-top:18px; background:var(--white); border:1px solid var(--line); border-radius:14px; padding:14px 16px; width:100%; max-width:320px; text-align:left; font-size:11.5px; color:var(--ink-soft); max-height:220px; overflow-y:auto; }
+  .data-panel.on{ display:block; }
+  .data-panel div{ margin-bottom:6px; line-height:1.5; }
+  .data-panel b{ color:var(--ink); }
+  .start-btn{ background:var(--maroon-deep); color:var(--cream); border:none; border-radius:30px; padding:15px 38px; font-family:'Manrope',sans-serif; font-weight:600; font-size:14.5px; letter-spacing:0.02em; cursor:pointer; box-shadow:0 8px 20px rgba(110,31,52,0.25); }
+  .start-btn:active{ transform:scale(0.98); }
+
+  @media (prefers-reduced-motion: reduce){
+    .card, .pd-art-frame svg{ transition:none !important; }
+    .learning-circle, .pd-loading .ring{ animation:none !important; }
+  }
+
+  /* ---- SWIPE TUTORIAL OVERLAY ---- */
+  .swipe-tutorial{
+    position:fixed; inset:0; background:rgba(20,16,14,0.78);
+    backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+    z-index:300; display:none; align-items:center; justify-content:center;
+    padding:24px; opacity:0; transition:opacity 0.3s ease;
+  }
+  .swipe-tutorial.on{ display:flex; opacity:1; }
+  .tut-grid{
+    display:grid;
+    grid-template-columns:60px 1fr 60px;
+    grid-template-rows:60px 1fr 60px;
+    gap:14px;
+    width:100%; max-width:340px; align-items:center; justify-items:center;
+  }
+  .tut-arrow{
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    color:var(--cream); font-size:11.5px; font-weight:600;
+    letter-spacing:0.05em; text-transform:uppercase; text-align:center;
+    animation:tutPulse 1.6s ease-in-out infinite;
+  }
+  .tut-arrow svg{ width:32px; height:32px; }
+  .tut-arrow.left{ grid-column:1; grid-row:2; }
+  .tut-arrow.right{ grid-column:3; grid-row:2; }
+  .tut-arrow.up{ grid-column:2; grid-row:1; }
+  .tut-arrow .lbl-detail{
+    font-size:10px; letter-spacing:0.04em; opacity:0.75;
+    text-transform:none; font-weight:500;
+  }
+  .tut-arrow.right{ color:#A8C49B; }
+  .tut-arrow.left{ color:#E89BAA; }
+  .tut-arrow.up{ color:#E5C97A; }
+  @keyframes tutPulse{
+    0%, 100%{ transform:translate(0,0); opacity:0.85; }
+    50%{ opacity:1; }
+  }
+  .tut-arrow.right{ animation-name:tutPulseR; }
+  .tut-arrow.left{ animation-name:tutPulseL; }
+  .tut-arrow.up{ animation-name:tutPulseU; }
+  @keyframes tutPulseR{ 0%,100%{ transform:translateX(0); opacity:0.85; } 50%{ transform:translateX(6px); opacity:1; } }
+  @keyframes tutPulseL{ 0%,100%{ transform:translateX(0); opacity:0.85; } 50%{ transform:translateX(-6px); opacity:1; } }
+  @keyframes tutPulseU{ 0%,100%{ transform:translateY(0); opacity:0.85; } 50%{ transform:translateY(-6px); opacity:1; } }
+  .tut-card-preview{
+    grid-column:2; grid-row:2;
+    width:100%; aspect-ratio:3/4; max-height:280px;
+    background:var(--cream); border-radius:16px;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 18px 40px rgba(0,0,0,0.4);
+    overflow:hidden;
+  }
+  .tut-card-preview svg{ width:78%; height:88%; }
+  .tut-cta{
+    margin-top:24px; background:var(--cream); color:var(--ink);
+    border:none; border-radius:28px; padding:13px 32px; font-weight:600;
+    font-size:14px; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.3);
+  }
+  .tut-title{
+    color:var(--cream); font-family:'Fraunces',serif; font-size:20px;
+    font-weight:500; text-align:center; margin:0 0 6px;
+  }
+  .tut-sub{
+    color:rgba(255,255,255,0.7); font-size:12.5px; text-align:center;
+    margin:0 0 18px;
+  }
+  .tut-wrap{ display:flex; flex-direction:column; align-items:center; width:100%; max-width:340px; }
+
+  /* medium swipe stamp + control */
+  .stamp.medium{ background:rgba(201,160,77,0.92); color:#fff; }
+  .ctrl-btn.medium svg{ stroke:var(--gold); fill:none; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="topbar">
+    <div class="wordmark" onclick="goTo('home')">tryl<span>o</span>
+      <div class="tagline">try it before you trust it</div>
+    </div>
+    <div class="demo-pill">early preview</div>
+  </div>
+
+  <div class="dept-toggle">
+    <div class="dept-glider" id="deptGlider"></div>
+    <button id="deptWomenBtn" class="active" onclick="setDept('women')">Women</button>
+    <button id="deptMenBtn" onclick="setDept('men')">Men</button>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen active" id="screen-home">
+    <div class="hero">
+      <h1>What are you <em>looking for</em> today?</h1>
+      <p>Type what you want. Swipe what you like. We learn fast and show you only the pieces that fit your taste.</p>
+    </div>
+    <div class="search-wrap">
+      <div class="search-shell" id="searchShell">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="searchInput" type="text" placeholder="bridal, lawn, abaya, lehenga, saree…" oninput="onSearchInput()" onkeydown="if(event.key==='Enter') startSearch()" autocomplete="off"/>
+        <button class="search-go" id="searchGo" disabled onclick="startSearch()">Find</button>
+      </div>
+      <div class="autocomplete" id="acBox"></div>
+    </div>
+    <p class="search-help">Start typing — we'll suggest the more specific styles as you go</p>
+    <div class="browse-label">Browse by category</div>
+    <div class="suggest-row" id="categoryChips"></div>
+    <div class="home-block">
+      <strong>How it works</strong>
+      <span>Search → 3 swipes set your taste → 2 swipes confirm → see your best matches → try them on. Skip anytime from the top-right.</span>
+    </div>
+    <div class="home-foot">Early preview — illustrations stand in for real seller photos, which drop in once sellers are onboarded.</div>
+  </div>
+
+  <!-- SWIPE -->
+  <div class="screen" id="screen-swipe">
+    <div class="swipe-header">
+      <button class="back-btn" onclick="goTo('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Search
+      </button>
+      <button class="skip-btn" onclick="skipSwiping()">
+        Skip to results
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </button>
+    </div>
+    <div class="section-label" id="swipeStageLabel">Step 1 — set your taste (1 of 3)</div>
+    <h2 class="section-title" id="swipeTitle">Swipe the ones that feel like you</h2>
+    <p class="stage-blurb" id="swipeBlurb">These first three set your benchmark. Swipe right on what you'd actually wear.</p>
+    <div class="progress-track" id="progressTrack"></div>
+    <div class="deck-wrap" id="deckWrap"><div class="phase-toast" id="phaseToast"></div></div>
+    <div class="swipe-controls" id="swipeControls">
+      <button class="ctrl-btn nope" onclick="swipeCard('left')" aria-label="Not for me">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <button class="ctrl-btn medium" onclick="swipeCard('up')" aria-label="Maybe / medium">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+      </button>
+      <button class="ctrl-btn like" onclick="swipeCard('right')" aria-label="I like this">
+        <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 7.6c0-2.6-2.1-4.6-4.7-4.6-1.6 0-3 .8-3.9 2-.9-1.2-2.3-2-3.9-2-2.6 0-4.7 2-4.7 4.6 0 5.4 8.6 10.9 8.6 10.9s8.6-5.5 8.6-10.9Z"/></svg>
+      </button>
+    </div>
+    <p class="swipe-hint">Right = love it · Left = skip · Up = maybe · drag the card too</p>
+  </div>
+
+  <!-- LEARNING -->
+  <div class="screen" id="screen-learning">
+    <div class="learning-circle"></div>
+    <h2 class="learning-title">Reading your taste</h2>
+    <p class="learning-sub" id="learningSub">Looking past the surface — what's really common across what you liked…</p>
+    <div class="learning-list" id="learningList"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="screen" id="screen-results">
+    <div class="swipe-header">
+      <button class="back-btn" onclick="goTo('home')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Start over
+      </button>
+      <div class="search-echo"><b id="resultsEchoCount">5</b> matches</div>
+    </div>
+    <div class="section-label">Your best matches</div>
+    <h2 class="section-title" id="resultsHeading">Picked from your taste</h2>
+    <div class="results-intro">
+      <b id="resultsTitle">Based on your swipes</b>
+      <p id="resultsSummary">These were chosen from verified Lahore sellers to match.</p>
+    </div>
+    <div class="results-grid" id="resultsGrid"></div>
+    <p class="reset-link" onclick="goTo('home')">Try a different search</p>
+    <p class="reset-link" onclick="goTo('feedback')">I'm done browsing — quick feedback</p>
+  </div>
+
+  <!-- PRODUCT -->
+  <div class="screen" id="screen-product">
+    <div class="swipe-header">
+      <button class="back-btn" onclick="goTo('results')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Back to matches
+      </button>
+      <div class="search-echo">Match</div>
+    </div>
+    <div class="pd-art">
+      <div class="pd-art-frame" id="pdArtFrame"></div>
+      <div class="pd-loading" id="pdLoading"><div class="ring"></div><span>Placing it on you…</span></div>
+    </div>
+    <div class="pd-seller">
+      <div class="pd-seller-left">
+        <b id="pdSeller">Nida's Studio, Lahore</b>
+        <span><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>Verified seller · 24h reply</span>
+      </div>
+      <div class="pd-seller-right"><b id="pdRating">★ 4.8</b><div>312 sales</div></div>
+    </div>
+    <h2 class="pd-name" id="pdName">Rose ember unstitched lawn</h2>
+    <p class="pd-meta" id="pdMeta">3-piece · pure lawn · embroidered · S to XL</p>
+    <p class="pd-price" id="pdPrice">PKR 3,450</p>
+    <div class="pd-actions">
+      <button class="tryon" id="tryonBtn" onclick="runTryOn()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 21c0-4 3-7 7-7s7 3 7 7"/></svg>
+        <span id="tryonLabel">See it on me</span>
+      </button>
+      <button class="buy" onclick="goToOrderIntent()">Order</button>
+    </div>
+    <div class="pd-tag" id="pdTag">imagined preview · for demo only</div>
+    <div class="privacy-note">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      <p>Your photo stays private. Never shown to sellers, never stored after this session, used only to generate your preview.</p>
+    </div>
+    <div class="more-rail">
+      <div class="more-rail-head"><h3>More like this</h3><span>chosen for your taste</span></div>
+      <div class="more-scroll" id="moreScroll"></div>
+    </div>
+  </div>
+
+  <!-- FEEDBACK -->
+  <div class="screen" id="screen-feedback">
+    <div class="fb-head">
+      <h2>Quick honest check-in</h2>
+      <p>30 seconds. This is what actually helps Ahmad — more than anything you'd say out loud.</p>
+    </div>
+    <div class="fb-block">
+      <span class="fb-q">Did the swiping feel like it understood you by the end?</span>
+      <div class="fb-scale" id="fbUnderstood">
+        <button onclick="fbSelect('understood',1,this)">1</button>
+        <button onclick="fbSelect('understood',2,this)">2</button>
+        <button onclick="fbSelect('understood',3,this)">3</button>
+        <button onclick="fbSelect('understood',4,this)">4</button>
+        <button onclick="fbSelect('understood',5,this)">5</button>
+      </div>
+    </div>
+    <div class="fb-block">
+      <span class="fb-q">Was there enough variety to actually find your style?</span>
+      <div class="fb-chips" id="fbVariety">
+        <div class="fb-chip" onclick="fbChip('variety','Plenty',this)">Plenty</div>
+        <div class="fb-chip" onclick="fbChip('variety','Okay',this)">Okay</div>
+        <div class="fb-chip" onclick="fbChip('variety','Too repetitive',this)">Too repetitive</div>
+      </div>
+    </div>
+    <div class="fb-block">
+      <span class="fb-q">Would you actually upload your real photo for "see it on me"?</span>
+      <div class="fb-chips" id="fbTryon">
+        <div class="fb-chip" onclick="fbChip('tryon','Yes, happily',this)">Yes, happily</div>
+        <div class="fb-chip" onclick="fbChip('tryon','Yes, if private',this)">Yes, if private</div>
+        <div class="fb-chip" onclick="fbChip('tryon','Not sure',this)">Not sure</div>
+        <div class="fb-chip" onclick="fbChip('tryon','No',this)">No</div>
+      </div>
+    </div>
+    <div class="fb-block">
+      <span class="fb-q">Would you trust ordering from a seller you found this way?</span>
+      <div class="fb-chips" id="fbTrust">
+        <div class="fb-chip" onclick="fbChip('trust','Yes',this)">Yes</div>
+        <div class="fb-chip" onclick="fbChip('trust','Maybe, need more proof',this)">Maybe, need more proof</div>
+        <div class="fb-chip" onclick="fbChip('trust','No',this)">No</div>
+      </div>
+    </div>
+    <div class="fb-block">
+      <span class="fb-q">Anything that felt off, confusing, or missing? (optional)</span>
+      <textarea class="fb-textarea" id="fbNotes" placeholder="Type freely — Urdu or English, whatever's easiest"></textarea>
+    </div>
+    <button class="fb-submit" id="fbSubmit" onclick="submitFeedback()">Submit feedback</button>
+    <p class="fb-skip" onclick="goTo('thanks')">Skip — just show me the summary</p>
+  </div>
+
+  <!-- THANKS -->
+  <div class="screen" id="screen-thanks">
+    <div class="thanks-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></div>
+    <h2 class="thanks-title">Shukriya for trying it</h2>
+    <p class="thanks-sub">Your honest reactions are exactly what helps shape this before it becomes a real app.</p>
+    <span class="data-toggle" onclick="toggleDataPanel()">For Ahmad: view this session's recorded data</span>
+    <div class="data-panel" id="dataPanel"></div>
+    <button class="start-btn" style="margin-top:22px" onclick="restartAll()">Start over</button>
+  </div>
+</div>
+
+<div class="reaction-pulse" id="reactionPulse">
+  <p id="reactionPulseText">Quick one — how does this feel so far?</p>
+  <div class="reaction-row" id="reactionRow"></div>
+  <div class="reaction-skip" onclick="dismissPulse()">Not now</div>
+</div>
+
+<div class="swipe-tutorial" id="swipeTutorial">
+  <div class="tut-wrap">
+    <h3 class="tut-title">How swiping works</h3>
+    <p class="tut-sub">Three reactions — the card listens to whichever direction you send it.</p>
+    <div class="tut-grid">
+      <div class="tut-arrow up">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <div>Maybe</div>
+        <div class="lbl-detail">unsure but ok</div>
+      </div>
+      <div class="tut-arrow left">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        <div>Skip</div>
+        <div class="lbl-detail">not for me</div>
+      </div>
+      <div class="tut-card-preview" id="tutCard"></div>
+      <div class="tut-arrow right">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        <div>Love</div>
+        <div class="lbl-detail">save it</div>
+      </div>
+    </div>
+    <button class="tut-cta" onclick="closeSwipeTutorial()">Got it — let's swipe</button>
+  </div>
+</div>
+
+<script>
+/* ==========================================================
+   TAXONOMY — broad categories, each with sub-styles for autocomplete
+   ========================================================== */
+const taxonomy = {
+  "lawn":     ["printed lawn suit","embroidered lawn suit","plain lawn suit","chikankari lawn"],
+  "kameez":   ["pret kurta","embroidered kameez","printed kameez","plain kameez","chiffon kameez"],
+  "kurta":    ["pret kurta","linen kurta","embroidered kurta","printed kurta"],
+  "suit":     ["three-piece suit","two-piece suit","formal suit","casual suit"],
+  "abaya":    ["everyday abaya","formal abaya","open-front abaya","embellished abaya"],
+  "bridal":   ["bridal lehenga","bridal maxi","bridal gharara","bridal saree","walima gown"],
+  "lehenga":  ["bridal lehenga","party lehenga","lehenga choli"],
+  "gharara":  ["bridal gharara","party gharara"],
+  "saree":    ["bridal saree","party saree","chiffon saree"],
+  "maxi":     ["formal maxi","party maxi","bridal maxi"],
+  "anarkali": ["formal anarkali","embroidered anarkali","party anarkali"],
+  "frock":    ["party frock","formal frock","angrakha frock"],
+  "shawl":    ["bridal shawl","embellished shawl","pashmina shawl"],
+  "party":    ["party maxi","party lehenga","party gharara","party saree","formal anarkali"],
+  "formal":   ["formal suit","formal maxi","formal anarkali","formal abaya"],
+
+  /* ---- MEN'S ---- */
+  "shirt":         ["formal shirt","casual shirt","printed shirt","linen shirt"],
+  "mens shalwar kameez": ["plain shalwar kameez","wash & wear kameez","kurta shalwar","embroidered men's kameez"],
+  "kurta shalwar": ["plain kurta shalwar","wash & wear kurta","embroidered kurta shalwar"],
+  "waistcoat":     ["formal waistcoat","wedding waistcoat","prince coat"],
+  "sherwani":      ["wedding sherwani","embroidered sherwani","prince coat"],
+  "mens shoes":    ["formal shoes","loafers","peshawari chappal","sneakers","kolhapuri"],
+  "shoes":         ["formal shoes","loafers","peshawari chappal","sneakers","kolhapuri","heels","khussa"],
+  "peshawari":     ["peshawari chappal","norozi chappal"],
+  "trouser":       ["dress trouser","chino trouser","cotton trouser"],
+  "polo":          ["polo shirt","pique polo"],
+};
+
+const MENS_CATS = new Set(["shirt","mens shalwar kameez","kurta shalwar","waistcoat","sherwani","mens shoes","peshawari","trouser","polo","men"]);
+
+/* Which taxonomy roots belong to which department (for autocomplete filtering).
+   "shoes" appears in both — it's shared. */
+const womenRoots = new Set(["lawn","kameez","kurta","suit","abaya","bridal","lehenga","gharara","saree","maxi","anarkali","frock","shawl","party","formal","shoes"]);
+const menRoots = new Set(["shirt","mens shalwar kameez","kurta shalwar","waistcoat","sherwani","mens shoes","shoes","peshawari","trouser","polo"]);
+function rootInDept(root, dept){
+  return dept === 'men' ? menRoots.has(root) : womenRoots.has(root);
+}
+
+const categoryChipsWomen = ["bridal","lawn","abaya","lehenga","anarkali","maxi","kameez","saree","party","frock","shoes"];
+const categoryChipsMen = ["shirt","mens shalwar kameez","kurta shalwar","sherwani","waistcoat","mens shoes","trouser","polo","peshawari"];
+
+let currentDept = 'women';
+
+/* Lightweight edit-distance for typo tolerance (e.g. "abayia" -> "abaya") */
+function editDistance(a, b){
+  a = a.toLowerCase(); b = b.toLowerCase();
+  const dp = Array.from({length:a.length+1}, (_,i)=>[i, ...Array(b.length).fill(0)]);
+  for(let j=0;j<=b.length;j++) dp[0][j] = j;
+  for(let i=1;i<=a.length;i++){
+    for(let j=1;j<=b.length;j++){
+      dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+    }
+  }
+  return dp[a.length][b.length];
+}
+/* Fuzzy-find the closest taxonomy root or sub-style within a tolerance scaled to word length */
+function fuzzyFindTaxonomy(term){
+  let best = null, bestDist = Infinity;
+  for(const root in taxonomy){
+    const dRoot = editDistance(term, root);
+    const tol = Math.max(1, Math.floor(root.length * 0.3));
+    if(dRoot <= tol && dRoot < bestDist){ best = {type:'root', root}; bestDist = dRoot; }
+    for(const sub of taxonomy[root]){
+      const dSub = editDistance(term, sub);
+      const subTol = Math.max(1, Math.floor(sub.length * 0.25));
+      if(dSub <= subTol && dSub < bestDist){ best = {type:'sub', root, sub}; bestDist = dSub; }
+      /* also compare against each word in the sub-style (e.g. "abayia" vs "abaya" inside "formal abaya") */
+      for(const word of sub.split(' ')){
+        const dWord = editDistance(term, word);
+        const wordTol = Math.max(1, Math.floor(word.length * 0.3));
+        if(dWord <= wordTol && dWord < bestDist){ best = {type:'root', root}; bestDist = dWord; }
+      }
+    }
+  }
+  return best;
+}
+
+function searchHint(term){
+  term = term.toLowerCase().trim();
+  for(const k in taxonomy){ if(term === k) return { vague:true, root:k, subs:taxonomy[k] }; }
+  for(const k in taxonomy){
+    for(const sub of taxonomy[k]){
+      if(sub.toLowerCase() === term) return { vague:false, root:k, picked:sub };
+    }
+  }
+  /* partial */
+  for(const k in taxonomy){
+    if(k.includes(term) || term.includes(k)) return { vague:true, root:k, subs:taxonomy[k] };
+    for(const sub of taxonomy[k]){
+      if(sub.toLowerCase().includes(term) || term.includes(sub.toLowerCase()))
+        return { vague:false, root:k, picked:sub };
+    }
+  }
+  /* typo-tolerant fallback before giving up */
+  const fuzzy = fuzzyFindTaxonomy(term);
+  if(fuzzy){
+    if(fuzzy.type === 'sub') return { vague:false, root:fuzzy.root, picked:fuzzy.sub, corrected:true };
+    return { vague:true, root:fuzzy.root, subs:taxonomy[fuzzy.root], corrected:true };
+  }
+  return { vague:false, root:null, picked:term };
+}
+
+/* ==========================================================
+   CATALOG — broad: many categories, ~6-8 each.
+   attributes: pattern, tone, brightness, saturation, formality, coverage, cut, silhouette
+   silhouettes: kurta, suit, abaya, shawl-set, lehenga, gharara, saree, maxi, anarkali, frock
+   imgSlot: null now (renders SVG); drop real seller photo URL here later.
+   ========================================================== */
+let _id = 0; const nid = ()=> ++_id;
+function P(o){ return Object.assign({ id:nid(), imgSlot:null, sales: 60+Math.floor(Math.random()*300) }, o); }
+
+const catalog = [
+  /* ---------- LAWN (7) ---------- */
+  P({cat:["lawn","suit"], sub:"printed lawn suit", name:"Marigold printed lawn", seller:"Nida's Studio, Lahore", rating:4.8, price:"PKR 3,200", meta:"3-piece · printed lawn · cotton", fabric:"#D9A23C", accent:"#6E1F34", pattern:"printed", tone:"warm", brightness:"mid", saturation:"bright", formality:"casual", coverage:"modest", cut:"flowy", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"embroidered lawn suit", name:"Rose ember embroidered lawn", seller:"Nida's Studio, Lahore", rating:4.8, price:"PKR 3,450", meta:"3-piece · pure lawn · embroidered", fabric:"#8B2942", accent:"#C9A04D", pattern:"embroidered", tone:"warm", brightness:"dark", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"plain lawn suit", name:"Ivory plain lawn", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 2,950", meta:"3-piece · pure lawn · plain", fabric:"#F3ECDA", accent:"#8B2942", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"semi", coverage:"modest", cut:"straight", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"printed lawn suit", name:"Forest printed lawn", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 3,200", meta:"3-piece · printed lawn", fabric:"#3F5C45", accent:"#C9A04D", pattern:"printed", tone:"cool", brightness:"dark", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"chikankari lawn", name:"Powder chikankari lawn", seller:"Nida's Studio, Lahore", rating:4.8, price:"PKR 3,800", meta:"3-piece · chikankari · lawn", fabric:"#F0C8C9", accent:"#FBF6EF", pattern:"embroidered", tone:"warm", brightness:"light", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"plain lawn suit", name:"Slate plain lawn", seller:"Sukoon Wears", rating:4.7, price:"PKR 2,800", meta:"3-piece · plain · soft lawn", fabric:"#5C5048", accent:"#E3D9C8", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"suit"}),
+  P({cat:["lawn","suit"], sub:"embroidered lawn suit", name:"Teal thread lawn", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 3,500", meta:"3-piece · embroidered · lawn", fabric:"#2F6E6A", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"mid", saturation:"bright", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"suit"}),
+
+  /* ---------- KURTA / KAMEEZ (7) ---------- */
+  P({cat:["kameez","kurta"], sub:"linen kurta", name:"Linen cream daily kurta", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 2,200", meta:"stitched · linen · everyday", fabric:"#E8DDC7", accent:"#7A8B6F", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"embroidered kameez", name:"Sage thread pret kurta", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 2,800", meta:"stitched · cotton · embroidery", fabric:"#7A8B6F", accent:"#F3ECE1", pattern:"embroidered", tone:"cool", brightness:"mid", saturation:"muted", formality:"semi", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"chiffon kameez", name:"Powder pink chiffon top", seller:"Nida's Studio, Lahore", rating:4.8, price:"PKR 2,650", meta:"stitched · chiffon · 3/4 sleeve", fabric:"#F0C8C9", accent:"#8B2942", pattern:"plain", tone:"warm", brightness:"light", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"printed kameez", name:"Indigo block-print kurta", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 2,450", meta:"stitched · block print", fabric:"#3F4A6B", accent:"#FBF6EF", pattern:"printed", tone:"cool", brightness:"dark", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"plain kameez", name:"Onyx plain kurta", seller:"Sukoon Wears", rating:4.7, price:"PKR 2,300", meta:"stitched · crepe · plain", fabric:"#2B2422", accent:"#C9A04D", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"semi", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"embroidered kameez", name:"Rust embroidered kurta", seller:"Nida's Studio, Lahore", rating:4.8, price:"PKR 2,900", meta:"stitched · embroidered yoke", fabric:"#B05C3C", accent:"#F3ECDA", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"bright", formality:"semi", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+  P({cat:["kameez","kurta"], sub:"printed kameez", name:"Mint floral kurta", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 2,400", meta:"stitched · floral print", fabric:"#A9C9A4", accent:"#6E1F34", pattern:"printed", tone:"cool", brightness:"light", saturation:"bright", formality:"casual", coverage:"modest", cut:"straight", silhouette:"kurta"}),
+
+  /* ---------- ABAYA (6) ---------- */
+  P({cat:["abaya"], sub:"everyday abaya", name:"Soft beige everyday abaya", seller:"Sukoon Wears", rating:4.7, price:"PKR 3,400", meta:"nida · closed front", fabric:"#D4C2A3", accent:"#5C5048", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"casual", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+  P({cat:["abaya"], sub:"formal abaya", name:"Charcoal formal abaya", seller:"Sukoon Wears", rating:4.7, price:"PKR 4,500", meta:"crepe · open front · embellished", fabric:"#2B2422", accent:"#C9A04D", pattern:"embellished", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+  P({cat:["abaya"], sub:"open-front abaya", name:"Olive open-front abaya", seller:"Sukoon Wears", rating:4.7, price:"PKR 3,900", meta:"flowy · open front · plain", fabric:"#7A8B6F", accent:"#F3ECE1", pattern:"plain", tone:"cool", brightness:"mid", saturation:"muted", formality:"semi", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+  P({cat:["abaya"], sub:"embellished abaya", name:"Black pearl abaya", seller:"Mehak Couture", rating:4.9, price:"PKR 5,600", meta:"pearl work · formal", fabric:"#23201F", accent:"#E5D2A9", pattern:"embellished", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+  P({cat:["abaya"], sub:"everyday abaya", name:"Dusty rose abaya", seller:"Sukoon Wears", rating:4.7, price:"PKR 3,600", meta:"nida · closed front", fabric:"#C9A0A0", accent:"#5C5048", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"casual", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+  P({cat:["abaya"], sub:"formal abaya", name:"Navy embroidered abaya", seller:"Mehak Couture", rating:4.9, price:"PKR 4,900", meta:"embroidered cuffs · formal", fabric:"#2A3550", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"flowy", silhouette:"abaya"}),
+
+  /* ---------- BRIDAL LEHENGA (6) ---------- */
+  P({cat:["bridal","lehenga"], sub:"bridal lehenga", name:"Crimson zardozi bridal lehenga", seller:"Mehak Couture", rating:4.9, price:"PKR 95,000", meta:"zardozi · pure silk · floor length", fabric:"#7A1228", accent:"#C9A04D", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+  P({cat:["bridal","lehenga"], sub:"bridal lehenga", name:"Maroon velvet bridal lehenga", seller:"Mehak Couture", rating:4.9, price:"PKR 120,000", meta:"velvet · heavy embellishment", fabric:"#5A1226", accent:"#D9A23C", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+  P({cat:["bridal","lehenga"], sub:"bridal lehenga", name:"Rose gold bridal lehenga", seller:"Sana Bridals", rating:4.8, price:"PKR 88,000", meta:"sequin · net · scalloped", fabric:"#C58B7A", accent:"#E5D2A9", pattern:"embellished", tone:"warm", brightness:"mid", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+  P({cat:["bridal","lehenga"], sub:"party lehenga", name:"Emerald party lehenga", seller:"Sana Bridals", rating:4.8, price:"PKR 42,000", meta:"party · embroidered net", fabric:"#1F5C44", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+  P({cat:["bridal","lehenga"], sub:"lehenga choli", name:"Ivory pearl lehenga", seller:"Sana Bridals", rating:4.8, price:"PKR 76,000", meta:"pearl · walima · ivory", fabric:"#EFE6D2", accent:"#C9A04D", pattern:"embellished", tone:"neutral", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+  P({cat:["bridal","lehenga"], sub:"party lehenga", name:"Plum sequin lehenga", seller:"Sana Bridals", rating:4.8, price:"PKR 38,000", meta:"sequin · party · plum", fabric:"#5C2A4A", accent:"#D9A23C", pattern:"embellished", tone:"cool", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"lehenga"}),
+
+  /* ---------- GHARARA (4) ---------- */
+  P({cat:["bridal","gharara"], sub:"bridal gharara", name:"Garnet bridal gharara", seller:"Mehak Couture", rating:4.9, price:"PKR 68,000", meta:"gota · pure silk · gharara", fabric:"#6E1F2E", accent:"#D9A23C", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"gharara"}),
+  P({cat:["bridal","gharara"], sub:"party gharara", name:"Gold tissue gharara", seller:"Sana Bridals", rating:4.8, price:"PKR 36,000", meta:"tissue · party · gold", fabric:"#C9A04D", accent:"#7A1228", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"gharara"}),
+  P({cat:["bridal","gharara"], sub:"party gharara", name:"Powder blue gharara", seller:"Sana Bridals", rating:4.8, price:"PKR 34,000", meta:"organza · party · pastel", fabric:"#A9BFD9", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"gharara"}),
+  P({cat:["bridal","gharara"], sub:"bridal gharara", name:"Wine velvet gharara", seller:"Mehak Couture", rating:4.9, price:"PKR 72,000", meta:"velvet · bridal · wine", fabric:"#4A1424", accent:"#D9A23C", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"gharara"}),
+
+  /* ---------- SAREE (4) ---------- */
+  P({cat:["saree","bridal"], sub:"bridal saree", name:"Ruby silk bridal saree", seller:"Mehak Couture", rating:4.9, price:"PKR 58,000", meta:"pure silk · zari border", fabric:"#8B1E3A", accent:"#D9A23C", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"saree"}),
+  P({cat:["saree","party"], sub:"chiffon saree", name:"Black chiffon saree", seller:"Sana Bridals", rating:4.8, price:"PKR 22,000", meta:"chiffon · party · sequin pallu", fabric:"#23201F", accent:"#C9A04D", pattern:"embellished", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"saree"}),
+  P({cat:["saree","party"], sub:"party saree", name:"Teal organza saree", seller:"Sana Bridals", rating:4.8, price:"PKR 26,000", meta:"organza · party · teal", fabric:"#1F6E6A", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"mid", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"saree"}),
+  P({cat:["saree"], sub:"chiffon saree", name:"Blush plain chiffon saree", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 14,000", meta:"chiffon · plain · blush", fabric:"#E2BFC0", accent:"#8B2942", pattern:"plain", tone:"warm", brightness:"light", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"saree"}),
+
+  /* ---------- MAXI / GOWN (5) ---------- */
+  P({cat:["maxi","bridal"], sub:"bridal maxi", name:"Champagne walima gown", seller:"Sana Bridals", rating:4.8, price:"PKR 64,000", meta:"trail · walima · champagne", fabric:"#E5D2A9", accent:"#C9A04D", pattern:"embellished", tone:"warm", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"maxi"}),
+  P({cat:["maxi","party"], sub:"party maxi", name:"Wine flared party maxi", seller:"Sana Bridals", rating:4.8, price:"PKR 28,000", meta:"flared · party · wine", fabric:"#5A1830", accent:"#D9A23C", pattern:"embroidered", tone:"warm", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"maxi"}),
+  P({cat:["maxi","formal"], sub:"formal maxi", name:"Steel grey formal maxi", seller:"Sukoon Wears", rating:4.7, price:"PKR 19,000", meta:"plain · formal · grey", fabric:"#6B6B72", accent:"#E3D9C8", pattern:"plain", tone:"neutral", brightness:"mid", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"maxi"}),
+  P({cat:["maxi","party"], sub:"party maxi", name:"Emerald draped maxi", seller:"Sana Bridals", rating:4.8, price:"PKR 31,000", meta:"draped · party · emerald", fabric:"#1F5C44", accent:"#C9A04D", pattern:"embellished", tone:"cool", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"maxi"}),
+  P({cat:["maxi","formal"], sub:"formal maxi", name:"Blush plain formal maxi", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 16,500", meta:"plain · formal · blush", fabric:"#E2BFC0", accent:"#8B2942", pattern:"plain", tone:"warm", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"maxi"}),
+
+  /* ---------- ANARKALI (5) ---------- */
+  P({cat:["anarkali","formal"], sub:"formal anarkali", name:"Royal blue formal anarkali", seller:"Mehak Couture", rating:4.9, price:"PKR 34,000", meta:"embroidered · floor length", fabric:"#283A7A", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"dark", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"anarkali"}),
+  P({cat:["anarkali","party"], sub:"party anarkali", name:"Coral party anarkali", seller:"Sana Bridals", rating:4.8, price:"PKR 24,000", meta:"party · flared · coral", fabric:"#D86A52", accent:"#F3ECDA", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"anarkali"}),
+  P({cat:["anarkali","formal"], sub:"embroidered anarkali", name:"Ivory gold anarkali", seller:"Mehak Couture", rating:4.9, price:"PKR 39,000", meta:"gold work · ivory", fabric:"#EFE6D2", accent:"#C9A04D", pattern:"embellished", tone:"neutral", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"anarkali"}),
+  P({cat:["anarkali","formal"], sub:"formal anarkali", name:"Plum plain anarkali", seller:"Sukoon Wears", rating:4.7, price:"PKR 18,000", meta:"plain · formal · plum", fabric:"#5C2A4A", accent:"#E3D9C8", pattern:"plain", tone:"cool", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"anarkali"}),
+  P({cat:["anarkali","party"], sub:"party anarkali", name:"Mustard party anarkali", seller:"Sana Bridals", rating:4.8, price:"PKR 22,000", meta:"party · mustard · flared", fabric:"#C9961F", accent:"#6E1F34", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"bright", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"anarkali"}),
+
+  /* ---------- FROCK (4) ---------- */
+  P({cat:["frock","party"], sub:"party frock", name:"Lilac party frock", seller:"Sana Bridals", rating:4.8, price:"PKR 17,000", meta:"party · flared · lilac", fabric:"#B79FC9", accent:"#C9A04D", pattern:"embroidered", tone:"cool", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"frock"}),
+  P({cat:["frock","formal"], sub:"angrakha frock", name:"Rust angrakha frock", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 14,500", meta:"angrakha · rust · cotton net", fabric:"#B05C3C", accent:"#F3ECDA", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"frock"}),
+  P({cat:["frock","formal"], sub:"formal frock", name:"Bottle green frock", seller:"Sukoon Wears", rating:4.7, price:"PKR 15,500", meta:"formal · flared · green", fabric:"#1F4A36", accent:"#C9A04D", pattern:"plain", tone:"cool", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"frock"}),
+  P({cat:["frock","party"], sub:"party frock", name:"Peach tiered frock", seller:"Sana Bridals", rating:4.8, price:"PKR 16,000", meta:"tiered · party · peach", fabric:"#E6A98C", accent:"#8B2942", pattern:"plain", tone:"warm", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"frock"}),
+
+  /* ---------- SHAWL-SET (3) ---------- */
+  P({cat:["shawl","bridal"], sub:"bridal shawl", name:"Indigo dusk bridal shawl", seller:"Mehak Couture", rating:4.9, price:"PKR 6,200", meta:"hand-embellished · silk", fabric:"#3F4A6B", accent:"#C9A04D", pattern:"embellished", tone:"cool", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"shawl-set"}),
+  P({cat:["shawl"], sub:"pashmina shawl", name:"Camel pashmina shawl", seller:"Warda Edit, Gulberg", rating:4.6, price:"PKR 4,800", meta:"pashmina · plain · camel", fabric:"#C2A06B", accent:"#5C5048", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"semi", coverage:"modest", cut:"flowy", silhouette:"shawl-set"}),
+  P({cat:["shawl"], sub:"embellished shawl", name:"Black gold embellished shawl", seller:"Mehak Couture", rating:4.9, price:"PKR 7,400", meta:"gold work · black", fabric:"#23201F", accent:"#D9A23C", pattern:"embellished", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"flowy", silhouette:"shawl-set"}),
+
+  /* ========== MEN'S ========== */
+  /* ---------- SHIRTS (7) ---------- */
+  P({cat:["shirt","men"], sub:"formal shirt", name:"White formal dress shirt", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 2,900", meta:"cotton · slim fit · long sleeve", fabric:"#F4F1EA", accent:"#5C5048", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"shirt"}),
+  P({cat:["shirt","men"], sub:"formal shirt", name:"Sky blue formal shirt", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 2,900", meta:"cotton · slim fit · formal", fabric:"#AFC9E0", accent:"#2A3550", pattern:"plain", tone:"cool", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"shirt"}),
+  P({cat:["shirt","men"], sub:"casual shirt", name:"Olive casual shirt", seller:"Urban Thread, Karachi", rating:4.5, price:"PKR 2,400", meta:"cotton · regular fit · casual", fabric:"#7A8B5A", accent:"#3A3A2A", pattern:"plain", tone:"cool", brightness:"mid", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"shirt"}),
+  P({cat:["shirt","men"], sub:"printed shirt", name:"Navy checked shirt", seller:"Urban Thread, Karachi", rating:4.5, price:"PKR 2,600", meta:"cotton · checks · casual", fabric:"#2A3550", accent:"#D9D2C2", pattern:"printed", tone:"cool", brightness:"dark", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"shirt"}),
+  P({cat:["shirt","men"], sub:"linen shirt", name:"Beige linen shirt", seller:"Urban Thread, Karachi", rating:4.5, price:"PKR 3,100", meta:"linen · relaxed · summer", fabric:"#E0D5BE", accent:"#8A7A5A", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"semi", coverage:"modest", cut:"straight", silhouette:"shirt"}),
+  P({cat:["shirt","men"], sub:"printed shirt", name:"Charcoal printed shirt", seller:"Urban Thread, Karachi", rating:4.5, price:"PKR 2,700", meta:"cotton · subtle print · casual", fabric:"#3A3A3F", accent:"#C9A04D", pattern:"printed", tone:"neutral", brightness:"dark", saturation:"muted", formality:"casual", coverage:"modest", cut:"straight", silhouette:"shirt"}),
+  P({cat:["shirt","polo","men"], sub:"polo shirt", name:"Maroon pique polo", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 1,900", meta:"pique · half sleeve · polo", fabric:"#6E1F34", accent:"#F4F1EA", pattern:"plain", tone:"warm", brightness:"dark", saturation:"muted", formality:"casual", coverage:"modest", cut:"fitted", silhouette:"shirt"}),
+
+  /* ---------- MEN'S SHALWAR KAMEEZ / KURTA (6) ---------- */
+  P({cat:["mens shalwar kameez","kurta shalwar","men"], sub:"plain shalwar kameez", name:"White cotton shalwar kameez", seller:"Junaid Fabrics, Lahore", rating:4.8, price:"PKR 3,800", meta:"cotton · plain · stitched", fabric:"#F4F1EA", accent:"#8A7A5A", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"semi", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+  P({cat:["mens shalwar kameez","kurta shalwar","men"], sub:"wash & wear kameez", name:"Black wash & wear kameez", seller:"Junaid Fabrics, Lahore", rating:4.8, price:"PKR 3,600", meta:"wash & wear · plain · stitched", fabric:"#23201F", accent:"#C9A04D", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"semi", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+  P({cat:["mens shalwar kameez","kurta shalwar","men"], sub:"kurta shalwar", name:"Grey kurta shalwar", seller:"Junaid Fabrics, Lahore", rating:4.8, price:"PKR 3,400", meta:"cotton blend · grey · stitched", fabric:"#7A7A80", accent:"#3A3A3A", pattern:"plain", tone:"neutral", brightness:"mid", saturation:"muted", formality:"semi", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+  P({cat:["mens shalwar kameez","men"], sub:"embroidered men's kameez", name:"Cream embroidered kurta", seller:"Junaid Fabrics, Lahore", rating:4.8, price:"PKR 4,600", meta:"embroidered collar · eid · cream", fabric:"#EFE6D2", accent:"#B05C3C", pattern:"embroidered", tone:"warm", brightness:"light", saturation:"muted", formality:"formal", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+  P({cat:["mens shalwar kameez","kurta shalwar","men"], sub:"plain kurta shalwar", name:"Navy kurta shalwar", seller:"Junaid Fabrics, Lahore", rating:4.8, price:"PKR 3,700", meta:"cotton · navy · stitched", fabric:"#2A3550", accent:"#D9D2C2", pattern:"plain", tone:"cool", brightness:"dark", saturation:"muted", formality:"semi", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+  P({cat:["mens shalwar kameez","men"], sub:"embroidered men's kameez", name:"Sage eid kurta", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 4,200", meta:"embroidered placket · eid · sage", fabric:"#7A8B6F", accent:"#EFE6D2", pattern:"embroidered", tone:"cool", brightness:"mid", saturation:"muted", formality:"formal", coverage:"full", cut:"straight", silhouette:"mens-suit"}),
+
+  /* ---------- WAISTCOAT / SHERWANI / PRINCE COAT (5) ---------- */
+  P({cat:["waistcoat","men"], sub:"formal waistcoat", name:"Black formal waistcoat", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 4,800", meta:"over kameez · formal · black", fabric:"#23201F", accent:"#C9A04D", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"waistcoat"}),
+  P({cat:["waistcoat","sherwani","men"], sub:"wedding waistcoat", name:"Ivory embroidered waistcoat", seller:"Raja Couture, Lahore", rating:4.9, price:"PKR 8,500", meta:"embroidered · wedding · ivory", fabric:"#EFE6D2", accent:"#C9A04D", pattern:"embroidered", tone:"neutral", brightness:"light", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"waistcoat"}),
+  P({cat:["sherwani","men"], sub:"wedding sherwani", name:"Maroon wedding sherwani", seller:"Raja Couture, Lahore", rating:4.9, price:"PKR 24,000", meta:"embellished · groom · maroon", fabric:"#5A1226", accent:"#D9A23C", pattern:"embellished", tone:"warm", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"sherwani"}),
+  P({cat:["sherwani","men"], sub:"embroidered sherwani", name:"Black gold sherwani", seller:"Raja Couture, Lahore", rating:4.9, price:"PKR 22,000", meta:"gold embroidery · groom · black", fabric:"#23201F", accent:"#D9A23C", pattern:"embellished", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"sherwani"}),
+  P({cat:["sherwani","waistcoat","men"], sub:"prince coat", name:"Navy prince coat", seller:"Raja Couture, Lahore", rating:4.9, price:"PKR 16,000", meta:"prince coat · formal · navy", fabric:"#2A3550", accent:"#C9A04D", pattern:"plain", tone:"cool", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"sherwani"}),
+
+  /* ---------- MEN'S SHOES (6) ---------- */
+  P({cat:["mens shoes","shoes","men"], sub:"formal shoes", name:"Black formal Oxford", seller:"Stride & Co, Lahore", rating:4.6, price:"PKR 5,400", meta:"leather · lace-up · formal", fabric:"#23201F", accent:"#8A7A5A", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"shoe-formal"}),
+  P({cat:["mens shoes","shoes","men"], sub:"formal shoes", name:"Brown brogue", seller:"Stride & Co, Lahore", rating:4.6, price:"PKR 5,800", meta:"leather · brogue · formal", fabric:"#5A3A22", accent:"#C9A04D", pattern:"printed", tone:"warm", brightness:"dark", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"shoe-formal"}),
+  P({cat:["mens shoes","shoes","men"], sub:"loafers", name:"Tan suede loafers", seller:"Stride & Co, Lahore", rating:4.6, price:"PKR 4,900", meta:"suede · slip-on · loafer", fabric:"#B98C5A", accent:"#5A3A22", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"semi", coverage:"modest", cut:"fitted", silhouette:"shoe-formal"}),
+  P({cat:["mens shoes","shoes","peshawari","men"], sub:"peshawari chappal", name:"Tan peshawari chappal", seller:"Kaptaan Chappal, Peshawar", rating:4.8, price:"PKR 3,200", meta:"leather · handmade · peshawari", fabric:"#A9743C", accent:"#5A3A22", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"semi", coverage:"modest", cut:"flat", silhouette:"shoe-sandal"}),
+  P({cat:["mens shoes","shoes","peshawari","men"], sub:"norozi chappal", name:"Dark brown norozi", seller:"Kaptaan Chappal, Peshawar", rating:4.8, price:"PKR 3,600", meta:"leather · handmade · norozi", fabric:"#4A2E1A", accent:"#C9A04D", pattern:"plain", tone:"warm", brightness:"dark", saturation:"muted", formality:"semi", coverage:"modest", cut:"flat", silhouette:"shoe-sandal"}),
+  P({cat:["mens shoes","shoes","men"], sub:"sneakers", name:"White casual sneakers", seller:"Stride & Co, Lahore", rating:4.6, price:"PKR 4,200", meta:"canvas · casual · white", fabric:"#F0EDE6", accent:"#5C5048", pattern:"plain", tone:"neutral", brightness:"light", saturation:"muted", formality:"casual", coverage:"modest", cut:"flat", silhouette:"shoe-sneaker"}),
+
+  /* ---------- WOMEN'S SHOES (3) — so "shoes" search has both ---------- */
+  P({cat:["shoes","heels"], sub:"heels", name:"Nude block heels", seller:"Stride & Co, Lahore", rating:4.6, price:"PKR 3,800", meta:"block heel · formal · nude", fabric:"#D8B79A", accent:"#8A5A3A", pattern:"plain", tone:"warm", brightness:"light", saturation:"muted", formality:"formal", coverage:"modest", cut:"fitted", silhouette:"shoe-heel"}),
+  P({cat:["shoes","khussa"], sub:"khussa", name:"Gold embroidered khussa", seller:"Kaptaan Chappal, Peshawar", rating:4.8, price:"PKR 2,600", meta:"embroidered · khussa · gold", fabric:"#C9A04D", accent:"#6E1F34", pattern:"embroidered", tone:"warm", brightness:"mid", saturation:"bright", formality:"semi", coverage:"modest", cut:"flat", silhouette:"shoe-sandal"}),
+  P({cat:["shoes","kolhapuri"], sub:"kolhapuri", name:"Tan kolhapuri flats", seller:"Kaptaan Chappal, Peshawar", rating:4.8, price:"PKR 2,200", meta:"leather · flat · kolhapuri", fabric:"#A9743C", accent:"#5A3A22", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"casual", coverage:"modest", cut:"flat", silhouette:"shoe-sandal"}),
+
+  /* ---------- MEN'S TROUSERS (3) ---------- */
+  P({cat:["trouser","men"], sub:"dress trouser", name:"Charcoal dress trouser", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 3,200", meta:"wool blend · formal · charcoal", fabric:"#3A3A3F", accent:"#8A7A5A", pattern:"plain", tone:"neutral", brightness:"dark", saturation:"muted", formality:"formal", coverage:"full", cut:"fitted", silhouette:"trouser"}),
+  P({cat:["trouser","men"], sub:"chino trouser", name:"Khaki chinos", seller:"Urban Thread, Karachi", rating:4.5, price:"PKR 2,800", meta:"cotton · chino · khaki", fabric:"#C2A878", accent:"#5A3A22", pattern:"plain", tone:"warm", brightness:"mid", saturation:"muted", formality:"casual", coverage:"full", cut:"straight", silhouette:"trouser"}),
+  P({cat:["trouser","men"], sub:"cotton trouser", name:"Navy cotton trouser", seller:"Adeel Menswear, Lahore", rating:4.7, price:"PKR 2,600", meta:"cotton · navy · semi-formal", fabric:"#2A3550", accent:"#D9D2C2", pattern:"plain", tone:"cool", brightness:"dark", saturation:"muted", formality:"semi", coverage:"full", cut:"straight", silhouette:"trouser"}),
+];
+
+/* Tag each product with a department. Men's items carry "men" in their cat array;
+   the shared "shoes" items get tagged by their specific sub-style. */
+const MENS_SUBS = new Set(["formal shoes","loafers","peshawari chappal","norozi chappal","sneakers"]);
+const WOMENS_SHOE_SUBS = new Set(["heels","khussa","kolhapuri"]);
+catalog.forEach(p=>{
+  if(p.cat.includes('men')) p.dept = 'men';
+  else if(WOMENS_SHOE_SUBS.has(p.sub)) p.dept = 'women';
+  else if(MENS_SUBS.has(p.sub)) p.dept = 'men';
+  else p.dept = 'women';
+});
+
+/* ==========================================================
+   STATE
+   ========================================================== */
+let searchTerm = "", searchHintResult = null;
+let swipeQueue = [], currentSwipe = 0, swipeLog = [], phase = 1;
+const PHASE1_COUNT = 3, PHASE2_COUNT = 2, TOTAL_SWIPES = PHASE1_COUNT + PHASE2_COUNT;
+
+const session = {
+  startedAt: Date.now(), searches: [], vagueSearchUsed:false, swipes:[],
+  productsOpened:[], tryOnsRun:0, moreLikeThisClicks:0, skippedSwiping:false,
+  pulseResponses:[], pulseShown:new Set(),
+  tutorialShown:false,
+  exitSurvey:{ understood:null, variety:null, tryon:null, trust:null, notes:"" },
+};
+
+/* ==========================================================
+   CATEGORY CHIPS on home
+   ========================================================== */
+function renderCategoryChips(){
+  const row = document.getElementById('categoryChips');
+  const list = currentDept === 'men' ? categoryChipsMen : categoryChipsWomen;
+  row.innerHTML = list.map(c => `<div class="suggest-chip" onclick="quickSearch('${c}')">${c}</div>`).join('');
+}
+
+function setDept(dept){
+  if(currentDept === dept) return;
+  currentDept = dept;
+  session.deptSwitches = (session.deptSwitches||0) + 1;
+  document.getElementById('deptGlider').classList.toggle('men', dept === 'men');
+  document.getElementById('deptWomenBtn').classList.toggle('active', dept === 'women');
+  document.getElementById('deptMenBtn').classList.toggle('active', dept === 'men');
+  renderCategoryChips();
+  /* update placeholder to match dept */
+  const ph = dept === 'men'
+    ? "shirt, shalwar kameez, sherwani, shoes…"
+    : "bridal, lawn, abaya, lehenga, saree…";
+  document.getElementById('searchInput').placeholder = ph;
+  /* close any open autocomplete */
+  document.getElementById('acBox').classList.remove('on');
+  document.getElementById('searchShell').classList.remove('has-suggest');
+  /* if currently on home, just refresh; otherwise send back home for a clean dept context */
+  if(!document.getElementById('screen-home').classList.contains('active')){
+    goTo('home');
+  }
+}
+
+/* ==========================================================
+   AUTOCOMPLETE
+   ========================================================== */
+function onSearchInput(){
+  const v = document.getElementById('searchInput').value.trim();
+  document.getElementById('searchGo').disabled = v.length === 0;
+  const ac = document.getElementById('acBox'), shell = document.getElementById('searchShell');
+  if(!v){ ac.classList.remove('on'); shell.classList.remove('has-suggest'); return; }
+  const lower = v.toLowerCase();
+  const matches = [];
+  for(const root in taxonomy){
+    if(!rootInDept(root, currentDept)) continue;
+    if(root.startsWith(lower) || root.includes(lower)){
+      taxonomy[root].forEach(sub => { if(!matches.some(m=>m.text===sub)) matches.push({text:sub, cat:root}); });
+    }
+    taxonomy[root].forEach(sub => {
+      if(sub.toLowerCase().includes(lower) && !matches.some(m=>m.text===sub)) matches.push({text:sub, cat:root});
+    });
+  }
+  if(!matches.length){
+    /* typo-tolerant fallback for the dropdown too */
+    const fuzzy = fuzzyFindTaxonomy(lower);
+    if(fuzzy && rootInDept(fuzzy.root, currentDept)){
+      const subsToShow = fuzzy.type === 'sub' ? [fuzzy.sub] : taxonomy[fuzzy.root].slice(0,5);
+      ac.innerHTML = `<div class="ac-item" style="font-style:italic;color:var(--ink-soft);font-size:12px;cursor:default;border-top:none;">did you mean…</div>` +
+        subsToShow.map(s=>`<div class="ac-item" onclick="pickSuggestion('${s}')"><span>${s}</span><span class="ac-cat">${fuzzy.root}</span></div>`).join('');
+      ac.classList.add('on'); shell.classList.add('has-suggest');
+    } else {
+      ac.classList.remove('on'); shell.classList.remove('has-suggest');
+    }
+    return;
+  }
+  const top = matches.slice(0,8);
+  ac.innerHTML = top.map(m=>{
+    const idx = m.text.toLowerCase().indexOf(lower);
+    let disp = m.text;
+    if(idx>=0) disp = m.text.slice(0,idx)+`<span class="ac-mark">${m.text.slice(idx,idx+lower.length)}</span>`+m.text.slice(idx+lower.length);
+    return `<div class="ac-item" onclick="pickSuggestion('${m.text}')"><span>${disp}</span><span class="ac-cat">${m.cat}</span></div>`;
+  }).join('');
+  ac.classList.add('on'); shell.classList.add('has-suggest');
+}
+function pickSuggestion(text){
+  document.getElementById('searchInput').value = text;
+  document.getElementById('acBox').classList.remove('on');
+  document.getElementById('searchShell').classList.remove('has-suggest');
+  document.getElementById('searchGo').disabled = false;
+  startSearch();
+}
+function quickSearch(term){
+  document.getElementById('searchInput').value = term;
+  document.getElementById('acBox').classList.remove('on');
+  document.getElementById('searchShell').classList.remove('has-suggest');
+  onSearchInput(); startSearch();
+}
+
+/* ==========================================================
+   SEARCH — category-faithful queue building
+   ========================================================== */
+function inDept(p){ return p.dept === currentDept; }
+function catalogForCategory(root){
+  return catalog.filter(p => p.cat.includes(root) && inDept(p));
+}
+function catalogForSub(sub, root){
+  let m = catalog.filter(p => p.sub.toLowerCase() === sub.toLowerCase() && inDept(p));
+  if(m.length < 3 && root) m = m.concat(catalogForCategory(root).filter(p=>!m.includes(p)));
+  return m;
+}
+
+function startSearch(){
+  searchTerm = document.getElementById('searchInput').value.trim().toLowerCase();
+  if(!searchTerm) return;
+  session.searches.push({term:searchTerm, at:Date.now()});
+  searchHintResult = searchHint(searchTerm);
+  session.vagueSearchUsed = session.vagueSearchUsed || searchHintResult.vague;
+
+  if(searchHintResult.root){
+    /* keep all in-category items (within current dept) as the working pool */
+    activePool = catalogForCategory(searchHintResult.root);
+  } else {
+    activePool = catalog.filter(inDept);
+  }
+
+  if(searchHintResult.vague){
+    /* Phase 1: one representative per distinct sub-style so she picks a direction */
+    const subs = searchHintResult.subs;
+    const q = [];
+    for(const sub of subs){
+      const pick = catalog.find(p => p.sub.toLowerCase() === sub.toLowerCase() && inDept(p) && !q.find(x=>x.id===p.id));
+      if(pick) q.push(pick);
+      if(q.length >= 3) break;
+    }
+    while(q.length < 3){
+      const more = activePool.find(p=>!q.find(x=>x.id===p.id));
+      if(!more) break; q.push(more);
+    }
+    swipeQueue = q.slice(0,3);
+  } else {
+    /* Specific sub: 3 varied items within that sub-style */
+    const matches = catalogForSub(searchHintResult.picked, searchHintResult.root);
+    swipeQueue = pickVaried(matches.length>=3 ? matches : matches.concat(activePool.filter(p=>!matches.includes(p))), 3);
+  }
+
+  currentSwipe = 0; swipeLog = []; phase = 1;
+  updateSwipeUI(); goTo('swipe');
+  if(!session.tutorialShown) openSwipeTutorial();
+}
+
+function openSwipeTutorial(){
+  if(!swipeQueue.length) return;
+  const first = swipeQueue[0];
+  document.getElementById('tutCard').innerHTML = dressSVG(first, false);
+  document.getElementById('swipeTutorial').classList.add('on');
+}
+function closeSwipeTutorial(){
+  document.getElementById('swipeTutorial').classList.remove('on');
+  session.tutorialShown = true;
+}
+
+let activePool = [];
+
+function pickVaried(pool, n){
+  if(pool.length <= n) return pool.slice();
+  const startIdx = Math.floor(Math.random() * pool.length);
+  const out = [pool[startIdx]];
+  while(out.length < n && out.length < pool.length){
+    let best=null, bestScore=-1;
+    for(const c of pool){
+      if(out.find(x=>x.id===c.id)) continue;
+      let s=0;
+      for(const ch of out){
+        if(c.pattern!==ch.pattern) s++;
+        if(c.brightness!==ch.brightness) s++;
+        if(c.tone!==ch.tone) s++;
+        if(c.saturation!==ch.saturation) s++;
+        if(c.silhouette!==ch.silhouette) s++;
+        if(c.seller!==ch.seller) s+=2; /* weight seller diversity higher so results don't cluster on 1-2 sellers */
+        if(c.sub!==ch.sub) s+=0.5;
+      }
+      if(s>bestScore){ bestScore=s; best=c; }
+    }
+    if(best) out.push(best); else break;
+  }
+  return out;
+}
+
+/* ==========================================================
+   PROGRESS / UI
+   ========================================================== */
+function updateSwipeUI(){
+  const track = document.getElementById('progressTrack');
+  track.innerHTML='';
+  for(let i=0;i<TOTAL_SWIPES;i++){
+    const d=document.createElement('div');
+    if(i<PHASE1_COUNT) d.classList.add('benchmark'); else d.classList.add('confirm');
+    if(i<currentSwipe) d.classList.add('done');
+    if(i===currentSwipe) d.classList.add('current');
+    track.appendChild(d);
+  }
+  if(phase===1){
+    document.getElementById('swipeStageLabel').textContent = `Step 1 — set your taste (${currentSwipe+1} of ${PHASE1_COUNT})`;
+    const correctedNote = searchHintResult && searchHintResult.corrected
+      ? `Showing results for "${searchHintResult.root}" — closest match to what you typed. ` : '';
+    if(searchHintResult && searchHintResult.vague){
+      document.getElementById('swipeTitle').textContent = `Which kind of ${searchHintResult.root} feels closer?`;
+      document.getElementById('swipeBlurb').textContent = correctedNote + `A few sub-styles of ${searchHintResult.root}. The one you swipe right on tells us where to dig.`;
+    } else {
+      document.getElementById('swipeTitle').textContent = "Swipe the ones that feel like you";
+      document.getElementById('swipeBlurb').textContent = correctedNote + "These first three set your benchmark. Swipe right on what you'd actually wear.";
+    }
+  } else {
+    const refIdx = currentSwipe - PHASE1_COUNT;
+    document.getElementById('swipeStageLabel').textContent = `Step 2 — confirming (${refIdx+1} of ${PHASE2_COUNT})`;
+    document.getElementById('swipeTitle').textContent = "Refined for you — let's confirm";
+    document.getElementById('swipeBlurb').textContent = "Same taste? A different reaction here adjusts your final matches.";
+  }
+  renderDeck();
+}
+
+function skipSwiping(){
+  session.skippedSwiping = true;
+  showLearning();
+}
+
+/* ==========================================================
+   SVG RENDER — dispatch by silhouette
+   ========================================================== */
+function dressSVG(p, withFace){
+  const fn = ({
+    kurta:kurtaSVG, suit:suitSVG, abaya:abayaSVG, 'shawl-set':shawlSetSVG,
+    lehenga:lehengaSVG, gharara:ghararaSVG, saree:sareeSVG, maxi:maxiSVG,
+    anarkali:anarkaliSVG, frock:frockSVG,
+    shirt:shirtSVG, 'mens-suit':mensSuitSVG, waistcoat:waistcoatSVG,
+    sherwani:sherwaniSVG, trouser:trouserSVG,
+    'shoe-formal':shoeFormalSVG, 'shoe-sandal':shoeSandalSVG,
+    'shoe-sneaker':shoeSneakerSVG, 'shoe-heel':shoeHeelSVG
+  })[p.silhouette] || kurtaSVG;
+  return fn(p, withFace);
+}
+function head(withFace, fabric){
+  return withFace ? `
+    <circle cx="100" cy="38" r="23" fill="#E8C9A8"/>
+    <path d="M78 34c0-13 9-22 22-22s22 9 22 22c0-3-4-6-9-6-5 5-28 5-35 0-3 1 0 3 0 6Z" fill="#3A2A20"/>
+  ` : `<circle cx="100" cy="36" r="17" fill="none" stroke="${fabric}" stroke-width="2" opacity="0.32"/>`;
+}
+function patternOverlay(p, x, y, w, h){
+  if(p.pattern==='plain') return '';
+  if(p.pattern==='printed'){
+    let d='';
+    for(let r=0;r<7;r++) for(let c=0;c<5;c++){
+      const cx=x+8+c*(w/5)+(r%2)*(w/10), cy=y+12+r*(h/7);
+      if(cx>x+w-6) continue;
+      d+=`<circle cx="${cx}" cy="${cy}" r="2" fill="${p.accent}" opacity="0.5"/>`;
+    }
+    return d;
+  }
+  if(p.pattern==='embroidered'){
+    return `
+      <path d="M${x+w/2-22} ${y+18} Q${x+w/2} ${y+8} ${x+w/2+22} ${y+18}" stroke="${p.accent}" stroke-width="1.6" fill="none" opacity="0.85"/>
+      <circle cx="${x+w/2-16}" cy="${y+20}" r="1.5" fill="${p.accent}"/>
+      <circle cx="${x+w/2}" cy="${y+16}" r="1.7" fill="${p.accent}"/>
+      <circle cx="${x+w/2+16}" cy="${y+20}" r="1.5" fill="${p.accent}"/>
+      <path d="M${x+12} ${y+h-20} Q${x+w/2} ${y+h-8} ${x+w-12} ${y+h-20}" stroke="${p.accent}" stroke-width="1.3" fill="none" opacity="0.65"/>
+    `;
+  }
+  if(p.pattern==='embellished'){
+    let g='';
+    for(let i=0;i<16;i++){
+      const px=x+12+((i*41)%(w-24)), py=y+40+((i*57)%(h-80));
+      g+=`<circle cx="${px}" cy="${py}" r="1.3" fill="${p.accent}" opacity="0.9"/>`;
+    }
+    g+=`<path d="M${x+8} ${y+h-13} L${x+w-8} ${y+h-13}" stroke="${p.accent}" stroke-width="3" opacity="0.9"/>`;
+    g+=`<path d="M${x+w/2-20} ${y+18} Q${x+w/2} ${y+10} ${x+w/2+20} ${y+18}" stroke="${p.accent}" stroke-width="2" fill="none"/>`;
+    return g;
+  }
+  return '';
+}
+
+function kurtaSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="225" rx="58" ry="6" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M72 60 C72 60 60 75 58 110 L56 175 C56 180 60 184 64 184 L136 184 C140 184 144 180 144 175 L142 110 C140 75 128 60 128 60 Z" fill="${p.fabric}"/>
+  <path d="M72 60 C82 72 118 72 128 60 L120 50 C113 58 87 58 80 50 Z" fill="${p.accent}" opacity="0.85"/>
+  <path d="M60 70 L50 108 L58 110 L68 80 Z" fill="${p.fabric}"/><path d="M140 70 L150 108 L142 110 L132 80 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,56,60,88,124)}
+  <path d="M84 184 L82 224 L96 224 L100 184 Z" fill="${p.accent}" opacity="0.5"/><path d="M116 184 L118 224 L104 224 L100 184 Z" fill="${p.accent}" opacity="0.5"/></svg>`;}
+
+function suitSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="226" rx="74" ry="7" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M70 60 C70 60 55 75 50 130 L46 215 C46 220 50 224 56 224 L144 224 C150 224 154 220 154 215 L150 130 C145 75 130 60 130 60 Z" fill="${p.fabric}"/>
+  <path d="M70 60 C80 72 120 72 130 60 L120 50 C113 58 87 58 80 50 Z" fill="${p.accent}" opacity="0.9"/>
+  <path d="M70 64 Q40 80 36 140 L42 142 Q60 100 76 80 Z" fill="${p.accent}" opacity="0.4"/>
+  <path d="M40 142 L34 198 L46 198 L48 144 Z" fill="${p.accent}" opacity="0.5"/>
+  ${patternOverlay(p,50,60,100,168)}</svg>`;}
+
+function abayaSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="228" rx="78" ry="7" fill="${p.accent}" opacity="0.16"/>${head(f,p.fabric)}
+  <path d="M68 60 C68 60 48 85 44 145 L36 224 L164 224 L156 145 C152 85 132 60 132 60 Z" fill="${p.fabric}"/>
+  <line x1="100" y1="60" x2="100" y2="220" stroke="${p.accent}" stroke-width="1.2" opacity="0.45"/>
+  <path d="M68 60 C82 72 118 72 132 60 L120 50 C113 58 87 58 80 50 Z" fill="${p.accent}" opacity="0.45"/>
+  <path d="M52 75 L40 200 L52 202 L66 90 Z" fill="${p.fabric}"/><path d="M148 75 L160 200 L148 202 L134 90 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,44,60,112,168)}</svg>`;}
+
+function shawlSetSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="226" rx="76" ry="7" fill="${p.accent}" opacity="0.2"/>${head(f,p.fabric)}
+  <path d="M76 62 L72 130 L40 222 L160 222 L128 130 L124 62 Z" fill="${p.fabric}"/>
+  <path d="M52 70 Q100 90 152 70 L156 84 Q100 108 48 84 Z" fill="${p.accent}" opacity="0.8"/>
+  <path d="M156 84 Q160 130 168 200 L156 202 Q150 140 148 96 Z" fill="${p.accent}" opacity="0.7"/>
+  <path d="M44 84 Q40 130 32 200 L44 202 Q50 140 52 96 Z" fill="${p.accent}" opacity="0.7"/>
+  ${patternOverlay(p,50,60,100,160)}</svg>`;}
+
+/* lehenga: fitted choli + very wide flared skirt */
+function lehengaSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="230" rx="86" ry="8" fill="${p.accent}" opacity="0.2"/>${head(f,p.fabric)}
+  <path d="M78 60 L74 96 L126 96 L122 60 C115 70 85 70 78 60 Z" fill="${p.fabric}"/>
+  <path d="M74 96 L22 226 L178 226 L126 96 Z" fill="${p.fabric}"/>
+  <path d="M74 96 L126 96 L122 60 L124 60 Q132 62 134 70 L150 120" stroke="${p.accent}" stroke-width="2" fill="none" opacity="0.5"/>
+  <path d="M30 200 Q100 214 170 200" stroke="${p.accent}" stroke-width="3" fill="none" opacity="0.7"/>
+  ${patternOverlay(p,40,100,120,120)}
+  <circle cx="100" cy="84" r="3" fill="${p.accent}"/></svg>`;}
+
+/* gharara: fitted top + flared-from-knee wide legs */
+function ghararaSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="230" rx="80" ry="8" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M76 60 L72 120 L128 120 L124 60 C116 70 84 70 76 60 Z" fill="${p.fabric}"/>
+  <path d="M74 120 L70 150 L40 226 L96 226 L100 150 Z" fill="${p.fabric}"/>
+  <path d="M126 120 L130 150 L160 226 L104 226 L100 150 Z" fill="${p.fabric}"/>
+  <line x1="72" y1="150" x2="128" y2="150" stroke="${p.accent}" stroke-width="3" opacity="0.7"/>
+  ${patternOverlay(p,60,60,80,60)}
+  <circle cx="100" cy="86" r="3" fill="${p.accent}"/></svg>`;}
+
+/* saree: draped, asymmetric pallu over one shoulder */
+function sareeSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="228" rx="72" ry="7" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M78 60 L72 150 L62 224 L138 224 L128 150 L122 60 C114 70 86 70 78 60 Z" fill="${p.fabric}"/>
+  <path d="M124 62 Q150 80 150 140 L138 200 L150 200 L162 130 Q164 80 132 58 Z" fill="${p.accent}" opacity="0.55"/>
+  <path d="M78 60 Q60 90 64 150 L72 150 L80 90 Z" fill="${p.accent}" opacity="0.35"/>
+  <path d="M62 210 Q100 220 138 210" stroke="${p.accent}" stroke-width="3" fill="none" opacity="0.7"/>
+  ${patternOverlay(p,72,70,52,130)}</svg>`;}
+
+/* maxi: column gown, slight flare, long */
+function maxiSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="230" rx="66" ry="7" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M80 60 C80 60 72 80 70 120 L60 226 L140 226 L130 120 C128 80 120 60 120 60 C114 70 86 70 80 60 Z" fill="${p.fabric}"/>
+  <path d="M80 60 C88 70 112 70 120 60 L114 52 Q100 60 86 52 Z" fill="${p.accent}" opacity="0.6"/>
+  <path d="M58 75 L50 150 L58 152 L70 90 Z" fill="${p.fabric}"/><path d="M142 75 L150 150 L142 152 L130 90 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,60,60,80,166)}</svg>`;}
+
+/* anarkali: fitted bodice flaring into a wide bell from waist */
+function anarkaliSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="230" rx="82" ry="8" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M82 60 L80 108 L120 108 L118 60 C112 70 88 70 82 60 Z" fill="${p.fabric}"/>
+  <path d="M80 108 C70 130 40 200 30 226 L170 226 C160 200 130 130 120 108 Z" fill="${p.fabric}"/>
+  <line x1="80" y1="108" x2="120" y2="108" stroke="${p.accent}" stroke-width="2.5" opacity="0.6"/>
+  <path d="M36 205 Q100 218 164 205" stroke="${p.accent}" stroke-width="3" fill="none" opacity="0.65"/>
+  <path d="M58 78 L48 150 L58 152 L70 95 Z" fill="${p.fabric}"/><path d="M142 78 L152 150 L142 152 L130 95 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,55,108,90,110)}
+  <circle cx="100" cy="92" r="2.5" fill="${p.accent}"/></svg>`;}
+
+/* frock: fitted top + knee-length flared skirt (shorter than anarkali) */
+function frockSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="225" rx="74" ry="7" fill="${p.accent}" opacity="0.18"/>${head(f,p.fabric)}
+  <path d="M80 60 L78 104 L122 104 L120 60 C113 70 87 70 80 60 Z" fill="${p.fabric}"/>
+  <path d="M78 104 C66 124 44 175 40 196 L160 196 C156 175 134 124 122 104 Z" fill="${p.fabric}"/>
+  <line x1="78" y1="104" x2="122" y2="104" stroke="${p.accent}" stroke-width="2.5" opacity="0.6"/>
+  <path d="M46 180 Q100 192 154 180" stroke="${p.accent}" stroke-width="2.5" fill="none" opacity="0.6"/>
+  <path d="M60 78 L50 124 L60 126 L72 92 Z" fill="${p.fabric}"/><path d="M140 78 L150 124 L140 126 L128 92 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,56,104,88,92)}
+  <path d="M86 196 L84 222 L98 222 L100 196 Z" fill="${p.accent}" opacity="0.4"/><path d="M114 196 L116 222 L102 222 L100 196 Z" fill="${p.accent}" opacity="0.4"/></svg>`;}
+
+/* ===== MEN'S SILHOUETTES ===== */
+function mhead(withFace, fabric){
+  return withFace ? `
+    <circle cx="100" cy="38" r="22" fill="#E0B894"/>
+    <path d="M80 30 Q100 16 120 30 L118 24 Q100 14 82 24 Z" fill="#2A1E14"/>
+    <rect x="84" y="20" width="32" height="10" rx="5" fill="#2A1E14"/>
+  ` : `<circle cx="100" cy="36" r="16" fill="none" stroke="${fabric}" stroke-width="2" opacity="0.32"/>`;
+}
+
+/* shirt: collared button-down, short hem, straight */
+function shirtSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="210" rx="56" ry="6" fill="${p.accent}" opacity="0.16"/>${mhead(f,p.fabric)}
+  <!-- collar -->
+  <path d="M84 56 L100 70 L116 56 L110 50 L100 58 L90 50 Z" fill="${p.accent}" opacity="0.6"/>
+  <!-- body -->
+  <path d="M76 58 C76 58 64 66 62 92 L60 196 L140 196 L138 92 C136 66 124 58 124 58 L116 56 L100 70 L84 56 Z" fill="${p.fabric}"/>
+  <!-- sleeves short -->
+  <path d="M64 64 L44 110 L60 116 L72 78 Z" fill="${p.fabric}"/>
+  <path d="M136 64 L156 110 L140 116 L128 78 Z" fill="${p.fabric}"/>
+  <!-- button placket -->
+  <line x1="100" y1="70" x2="100" y2="192" stroke="${p.accent}" stroke-width="1.5" opacity="0.5"/>
+  <circle cx="100" cy="92" r="1.6" fill="${p.accent}"/><circle cx="100" cy="116" r="1.6" fill="${p.accent}"/>
+  <circle cx="100" cy="140" r="1.6" fill="${p.accent}"/><circle cx="100" cy="164" r="1.6" fill="${p.accent}"/>
+  ${p.pattern==='printed' ? patternOverlay(p,62,70,76,120) : ''}
+  ${p.pattern==='embroidered' ? `<path d="M70 80 Q100 74 130 80" stroke="${p.accent}" stroke-width="1.4" fill="none" opacity="0.6"/>`:''}</svg>`;}
+
+/* mens-suit: long kameez + straight shalwar (full length, plain) */
+function mensSuitSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="228" rx="62" ry="7" fill="${p.accent}" opacity="0.16"/>${mhead(f,p.fabric)}
+  <!-- mandarin collar -->
+  <path d="M88 56 L100 64 L112 56 L108 50 Q100 56 92 50 Z" fill="${p.accent}" opacity="0.55"/>
+  <!-- long kameez -->
+  <path d="M78 58 C78 58 68 70 66 100 L64 180 L136 180 L134 100 C132 70 122 58 122 58 L112 56 L100 64 L88 56 Z" fill="${p.fabric}"/>
+  <!-- sleeves long -->
+  <path d="M66 64 L52 160 L66 162 L78 80 Z" fill="${p.fabric}"/>
+  <path d="M134 64 L148 160 L134 162 L122 80 Z" fill="${p.fabric}"/>
+  <!-- front placket + buttons -->
+  <line x1="100" y1="64" x2="100" y2="120" stroke="${p.accent}" stroke-width="1.4" opacity="0.5"/>
+  <circle cx="100" cy="80" r="1.5" fill="${p.accent}"/><circle cx="100" cy="98" r="1.5" fill="${p.accent}"/><circle cx="100" cy="116" r="1.5" fill="${p.accent}"/>
+  <!-- shalwar straight legs -->
+  <path d="M80 180 L76 224 L96 224 L99 180 Z" fill="${p.fabric}"/>
+  <path d="M120 180 L124 224 L104 224 L101 180 Z" fill="${p.fabric}"/>
+  <line x1="100" y1="180" x2="100" y2="224" stroke="${p.accent}" stroke-width="1" opacity="0.3"/>
+  ${p.pattern==='embroidered' ? `<path d="M100 64 L100 116" stroke="${p.accent}" stroke-width="2.5" opacity="0.45"/><circle cx="100" cy="72" r="2" fill="${p.accent}"/><circle cx="100" cy="88" r="2" fill="${p.accent}"/><circle cx="100" cy="104" r="2" fill="${p.accent}"/>`:''}</svg>`;}
+
+/* waistcoat: over a kameez — V-front sleeveless layer */
+function waistcoatSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="228" rx="60" ry="7" fill="${p.accent}" opacity="0.16"/>${mhead(f,p.fabric)}
+  <!-- inner kameez (light) -->
+  <path d="M80 58 C72 70 70 100 70 180 L130 180 C130 100 128 70 120 58 L112 56 L100 66 L88 56 Z" fill="#EFE9DC"/>
+  <path d="M80 180 L76 224 L96 224 L99 180 Z" fill="#EFE9DC"/><path d="M120 180 L124 224 L104 224 L101 180 Z" fill="#EFE9DC"/>
+  <!-- waistcoat layer -->
+  <path d="M82 58 L74 76 L72 150 L100 150 L100 70 Z" fill="${p.fabric}"/>
+  <path d="M118 58 L126 76 L128 150 L100 150 L100 70 Z" fill="${p.fabric}"/>
+  <path d="M82 58 L100 70 L118 58 L112 54 L100 62 L88 54 Z" fill="${p.accent}" opacity="0.5"/>
+  <circle cx="96" cy="92" r="1.6" fill="${p.accent}"/><circle cx="96" cy="108" r="1.6" fill="${p.accent}"/><circle cx="96" cy="124" r="1.6" fill="${p.accent}"/>
+  ${patternOverlay(p,74,70,52,76)}</svg>`;}
+
+/* sherwani: long fitted formal coat, knee+ length, ornate */
+function sherwaniSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="230" rx="58" ry="7" fill="${p.accent}" opacity="0.18"/>${mhead(f,p.fabric)}
+  <!-- high collar -->
+  <path d="M88 56 L100 62 L112 56 L110 48 Q100 54 90 48 Z" fill="${p.accent}" opacity="0.7"/>
+  <!-- long fitted coat -->
+  <path d="M80 58 C78 58 70 70 70 96 L66 200 L134 200 L130 96 C130 70 122 58 120 58 L112 56 L100 62 L88 56 Z" fill="${p.fabric}"/>
+  <!-- sleeves long fitted -->
+  <path d="M70 64 L58 190 L72 192 L82 80 Z" fill="${p.fabric}"/>
+  <path d="M130 64 L142 190 L128 192 L118 80 Z" fill="${p.fabric}"/>
+  <!-- center button line ornate -->
+  <line x1="100" y1="62" x2="100" y2="196" stroke="${p.accent}" stroke-width="2" opacity="0.7"/>
+  <circle cx="100" cy="78" r="2.2" fill="${p.accent}"/><circle cx="100" cy="98" r="2.2" fill="${p.accent}"/>
+  <circle cx="100" cy="118" r="2.2" fill="${p.accent}"/><circle cx="100" cy="138" r="2.2" fill="${p.accent}"/>
+  <!-- legs (churidar) -->
+  <path d="M84 200 L82 224 L96 224 L99 200 Z" fill="${p.fabric}"/><path d="M116 200 L118 224 L104 224 L101 200 Z" fill="${p.fabric}"/>
+  ${patternOverlay(p,70,64,60,130)}</svg>`;}
+
+/* trouser: pair of straight legs from waistband */
+function trouserSVG(p,f){return `<svg viewBox="0 0 200 240"><ellipse cx="100" cy="228" rx="50" ry="6" fill="${p.accent}" opacity="0.16"/>
+  <!-- waistband -->
+  <rect x="68" y="58" width="64" height="14" rx="3" fill="${p.fabric}"/>
+  <rect x="68" y="58" width="64" height="14" rx="3" fill="none" stroke="${p.accent}" stroke-width="1" opacity="0.5"/>
+  <!-- left leg -->
+  <path d="M70 72 L66 222 L92 222 L99 90 L99 72 Z" fill="${p.fabric}"/>
+  <!-- right leg -->
+  <path d="M130 72 L134 222 L108 222 L101 90 L101 72 Z" fill="${p.fabric}"/>
+  <!-- crease lines -->
+  <line x1="80" y1="78" x2="78" y2="220" stroke="${p.accent}" stroke-width="1" opacity="0.35"/>
+  <line x1="120" y1="78" x2="122" y2="220" stroke="${p.accent}" stroke-width="1" opacity="0.35"/>
+  <circle cx="100" cy="65" r="1.6" fill="${p.accent}"/>
+  ${p.pattern==='printed'?patternOverlay(p,68,76,64,140):''}</svg>`;}
+
+/* ===== SHOE SILHOUETTES ===== */
+/* formal shoe: side profile oxford/brogue */
+function shoeFormalSVG(p,f){return `<svg viewBox="0 0 200 240">
+  <ellipse cx="105" cy="170" rx="78" ry="10" fill="${p.accent}" opacity="0.14"/>
+  <!-- sole -->
+  <path d="M30 158 Q28 168 40 170 L168 170 Q178 168 176 158 L172 156 L34 156 Z" fill="${p.accent}" opacity="0.85"/>
+  <!-- upper -->
+  <path d="M34 156 Q36 120 70 116 L120 112 Q160 114 170 150 L172 156 Z" fill="${p.fabric}"/>
+  <!-- toe cap -->
+  <path d="M150 120 Q170 126 170 150 L150 152 Z" fill="${p.accent}" opacity="0.35"/>
+  <!-- heel counter -->
+  <path d="M34 156 Q36 124 60 118 L62 156 Z" fill="${p.accent}" opacity="0.2"/>
+  <!-- laces -->
+  <path d="M80 122 L98 128 M84 132 L100 137 M88 142 L102 146" stroke="${p.accent}" stroke-width="1.6" opacity="0.7"/>
+  ${p.pattern==='printed'?`<circle cx="158" cy="135" r="1.2" fill="${p.accent}"/><circle cx="152" cy="140" r="1.2" fill="${p.accent}"/><circle cx="162" cy="142" r="1.2" fill="${p.accent}"/>`:''}</svg>`;}
+
+/* sandal / chappal / khussa: open top strap profile */
+function shoeSandalSVG(p,f){return `<svg viewBox="0 0 200 240">
+  <ellipse cx="105" cy="172" rx="78" ry="9" fill="${p.accent}" opacity="0.14"/>
+  <!-- footbed -->
+  <path d="M32 164 Q30 172 42 172 L166 170 Q176 168 172 160 L160 158 Q100 150 44 158 Z" fill="${p.fabric}"/>
+  <!-- sole edge -->
+  <path d="M32 164 Q30 172 42 172 L166 170 Q176 168 172 160" fill="none" stroke="${p.accent}" stroke-width="2" opacity="0.6"/>
+  <!-- front straps -->
+  <path d="M120 158 Q135 138 152 156" fill="none" stroke="${p.fabric}" stroke-width="9"/>
+  <path d="M120 158 Q135 138 152 156" fill="none" stroke="${p.accent}" stroke-width="2" opacity="0.5"/>
+  <path d="M100 156 Q112 140 128 156" fill="none" stroke="${p.fabric}" stroke-width="8"/>
+  ${p.pattern==='embroidered'?`<circle cx="135" cy="148" r="1.6" fill="${p.accent}"/><circle cx="126" cy="150" r="1.4" fill="${p.accent}"/><circle cx="144" cy="150" r="1.4" fill="${p.accent}"/>`:''}</svg>`;}
+
+/* sneaker: chunky casual profile */
+function shoeSneakerSVG(p,f){return `<svg viewBox="0 0 200 240">
+  <ellipse cx="105" cy="174" rx="80" ry="9" fill="${p.accent}" opacity="0.14"/>
+  <!-- thick sole -->
+  <path d="M28 158 Q26 172 42 172 L170 172 Q182 170 178 156 L30 156 Z" fill="${p.accent}" opacity="0.75"/>
+  <rect x="30" y="160" width="148" height="4" fill="#fff" opacity="0.4"/>
+  <!-- upper -->
+  <path d="M32 156 Q34 122 72 118 L118 116 Q166 120 172 152 L172 156 Z" fill="${p.fabric}"/>
+  <!-- toe -->
+  <path d="M150 124 Q172 130 172 152 L150 154 Z" fill="${p.accent}" opacity="0.25"/>
+  <!-- laces area -->
+  <path d="M78 124 L96 130 M82 134 L100 139 M86 144 L102 148" stroke="${p.accent}" stroke-width="1.6" opacity="0.6"/>
+  <!-- swoosh-ish accent -->
+  <path d="M110 150 Q135 138 158 132" stroke="${p.accent}" stroke-width="3" fill="none" opacity="0.5"/></svg>`;}
+
+/* heel: women's block heel profile */
+function shoeHeelSVG(p,f){return `<svg viewBox="0 0 200 240">
+  <ellipse cx="105" cy="186" rx="70" ry="8" fill="${p.accent}" opacity="0.14"/>
+  <!-- sole + toe -->
+  <path d="M44 178 Q150 170 170 150 Q174 144 168 142 Q120 150 70 168 Q50 174 44 178 Z" fill="${p.fabric}"/>
+  <!-- block heel -->
+  <path d="M48 178 L46 178 L52 158 L62 160 L58 178 Z" fill="${p.fabric}"/>
+  <rect x="46" y="176" width="16" height="6" rx="1" fill="${p.accent}" opacity="0.6"/>
+  <!-- toe sole edge -->
+  <path d="M70 168 Q120 150 168 142" fill="none" stroke="${p.accent}" stroke-width="2" opacity="0.5"/>
+  ${p.pattern==='embroidered'?`<circle cx="120" cy="156" r="1.4" fill="${p.accent}"/><circle cx="135" cy="152" r="1.2" fill="${p.accent}"/>`:''}</svg>`;}
+
+/* ==========================================================
+   DECK
+   ========================================================== */
+function renderDeck(){
+  const wrap = document.getElementById('deckWrap');
+  const toast = document.getElementById('phaseToast');
+  wrap.innerHTML=''; wrap.appendChild(toast);
+  if(currentSwipe >= swipeQueue.length){ showLearning(); return; }
+  document.getElementById('swipeControls').style.display='flex';
+  [1,0].forEach(offset=>{
+    const idx=currentSwipe+offset;
+    if(idx>=swipeQueue.length) return;
+    const p=swipeQueue[idx];
+    const card=document.createElement('div');
+    card.className='card'; card.id = offset===0?'activeCard':'';
+    card.style.zIndex = offset===0?2:1;
+    card.style.transform = offset===0?'translateY(0) scale(1)':'translateY(10px) scale(0.96)';
+    card.style.opacity = offset===0?'1':'0.7';
+    card.innerHTML = `
+      <div class="card-art" style="background:${p.accent}1a">
+        <div class="verified-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg>verified seller</div>
+        <div class="stamp like" id="stamp-like-${idx}">liked</div>
+        <div class="stamp nope" id="stamp-nope-${idx}">passed</div>
+        <div class="stamp medium" id="stamp-medium-${idx}">maybe</div>
+        ${dressSVG(p,false)}
+      </div>
+      <div class="card-info">
+        <div class="seller-row"><span class="seller-name">${p.seller}</span><span class="seller-rating">★ ${p.rating}</span></div>
+        <p class="product-name">${p.name}</p>
+        <p class="product-meta">${p.meta} · <span class="price">${p.price}</span></p>
+      </div>`;
+    wrap.appendChild(card);
+  });
+  attachDrag();
+}
+function attachDrag(){
+  const card=document.getElementById('activeCard'); if(!card) return;
+  let sx=0,sy=0,dx=0,dy=0,drag=false;
+  const dn=(x,y)=>{drag=true;sx=x;sy=y;card.style.transition='none';};
+  const mv=(x,y)=>{ if(!drag)return;
+    dx=x-sx; dy=y-sy;
+    /* if user is clearly moving up, animate up + rotate slightly */
+    const verticalUp = dy < -30 && Math.abs(dy) > Math.abs(dx)*1.2;
+    if(verticalUp){
+      card.style.transform=`translate(${dx*0.3}px, ${dy}px) rotate(${dx/40}deg)`;
+    } else {
+      card.style.transform=`translateX(${dx}px) translateY(${Math.max(dy,0)*0.2}px) rotate(${dx/18}deg)`;
+    }
+    const l=document.getElementById(`stamp-like-${currentSwipe}`),
+          n=document.getElementById(`stamp-nope-${currentSwipe}`),
+          m=document.getElementById(`stamp-medium-${currentSwipe}`);
+    if(l) l.style.display = (dx>30 && !verticalUp) ? 'block' : 'none';
+    if(n) n.style.display = (dx<-30 && !verticalUp) ? 'block' : 'none';
+    if(m) m.style.display = verticalUp ? 'block' : 'none';
+  };
+  const up=()=>{ if(!drag)return; drag=false;
+    card.style.transition='transform 0.35s cubic-bezier(.22,1,.36,1), opacity 0.35s ease';
+    const verticalUp = dy < -80 && Math.abs(dy) > Math.abs(dx)*1.4;
+    if(verticalUp) swipeCard('up');
+    else if(dx>80) swipeCard('right');
+    else if(dx<-80) swipeCard('left');
+    else card.style.transform='translateX(0) rotate(0)';
+    dx=0; dy=0;
+  };
+  card.addEventListener('mousedown',e=>dn(e.clientX, e.clientY));
+  window.addEventListener('mousemove',e=>mv(e.clientX, e.clientY));
+  window.addEventListener('mouseup',up);
+  card.addEventListener('touchstart',e=>dn(e.touches[0].clientX, e.touches[0].clientY),{passive:true});
+  card.addEventListener('touchmove',e=>mv(e.touches[0].clientX, e.touches[0].clientY),{passive:true});
+  card.addEventListener('touchend',up);
+}
+function swipeCard(dir){
+  const card=document.getElementById('activeCard'); if(!card) return;
+  const product=swipeQueue[currentSwipe];
+  /* base weights: phase1 = 2x, phase2 = 1x. Medium (up) is half-strength of those. */
+  const baseW = phase===1?2:1;
+  const w = dir==='up' ? baseW * 0.5 : baseW;
+  swipeLog.push({id:product.id, dir, phase, weight:w, product});
+  session.swipes.push({id:product.id, dir, phase, at:Date.now()});
+  /* animate card exit */
+  if(dir==='up'){
+    card.style.transform=`translateY(-700px) rotate(0deg)`;
+  } else {
+    const endX = dir==='right'?600:-600;
+    card.style.transform=`translateX(${endX}px) rotate(${dir==='right'?30:-30}deg)`;
+  }
+  card.style.opacity='0';
+  setTimeout(()=>{
+    currentSwipe++;
+    if(currentSwipe===PHASE1_COUNT && phase===1){
+      phase=2;
+      showToast(buildBenchmarkInsight());
+      refineQueueAfterBenchmark();
+      setTimeout(()=>triggerPulse('after_phase1'),1200);
+    }
+    if(currentSwipe>=TOTAL_SWIPES){ showLearning(); return; }
+    updateSwipeUI();
+  },320);
+}
+function showToast(text){
+  const t=document.getElementById('phaseToast');
+  t.textContent=text; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'),2200);
+}
+
+/* ==========================================================
+   TASTE FAMILIES
+   ========================================================== */
+function buildProfile(){
+  const dims={ pattern:{plain:0,printed:0,embroidered:0,embellished:0}, tone:{warm:0,cool:0,neutral:0},
+    brightness:{light:0,mid:0,dark:0}, saturation:{muted:0,bright:0}, formality:{casual:0,semi:0,formal:0},
+    coverage:{modest:0,full:0}, cut:{fitted:0,flowy:0,straight:0}, silhouette:{} };
+  for(const e of swipeLog){
+    /* right = +1, up (medium) = +0.5, left = -1. Weight already encodes phase + medium half-strength. */
+    const sign = e.dir==='right' ? 1 : e.dir==='up' ? 1 : -1;
+    const w=e.weight, p=e.product;
+    ['pattern','tone','brightness','saturation','formality','coverage','cut'].forEach(k=>{ if(dims[k][p[k]]!==undefined) dims[k][p[k]]+=sign*w; });
+    dims.silhouette[p.silhouette]=(dims.silhouette[p.silhouette]||0)+sign*w;
+  }
+  return dims;
+}
+function deriveFamilies(profile){
+  const plain=profile.pattern.plain, busy=profile.pattern.printed+profile.pattern.embroidered+profile.pattern.embellished;
+  const restraint=plain-busy;
+  const palette_muted=profile.saturation.muted-profile.saturation.bright;
+  const dom=o=>Object.keys(o).length?Object.keys(o).reduce((a,b)=>o[a]>=o[b]?a:b):null;
+  return { restraint, palette_muted, dominantTone:dom(profile.tone), dominantBright:dom(profile.brightness),
+    dominantForm:dom(profile.formality), dominantSilh:dom(profile.silhouette), dominantCov:dom(profile.coverage), raw:profile };
+}
+function buildBenchmarkInsight(){
+  const f=deriveFamilies(buildProfile());
+  if(f.restraint>0 && f.palette_muted>0) return "Read: you like restraint — plain, muted pieces";
+  if(f.restraint>0) return "Read: you lean toward simple, plain pieces";
+  if(f.raw.pattern.embellished+f.raw.pattern.embroidered>0) return "Read: you like detail — embroidery and shine";
+  if(f.dominantTone==='warm') return "Read: warm tones feel like you";
+  if(f.dominantTone==='cool') return "Read: cool tones feel like you";
+  return "Read: still learning — next two will confirm";
+}
+function scoreProduct(p,f){
+  let s=0;
+  /* Pattern family — restraint strongest signal when clear */
+  if(f.restraint>0){
+    if(p.pattern==='plain') s+=4;            /* tighter: was 3 */
+    if(p.pattern==='embellished') s-=3;      /* tighter: was -2 */
+    if(p.pattern==='printed') s-=1.5;        /* tighter: was -1 */
+  }
+  else if(f.restraint<0){
+    if(p.pattern==='plain') s-=1.5;
+    if(p.pattern==='embroidered'||p.pattern==='embellished') s+=3; /* tighter */
+  }
+  /* Saturation — muted vs bright */
+  if(f.palette_muted>0){
+    if(p.saturation==='muted') s+=2.5;       /* tighter: was 2 */
+    if(p.saturation==='bright') s-=2.5;
+  }
+  else if(f.palette_muted<0){
+    if(p.saturation==='bright') s+=2.5;
+    if(p.saturation==='muted') s-=1.5;
+  }
+  /* Surface signals — boosted when signal strong enough to trust */
+  const toneStrength = Math.abs(f.raw.tone[f.dominantTone] || 0);
+  const formStrength = Math.abs(f.raw.formality[f.dominantForm] || 0);
+  const silhStrength = Math.abs(f.raw.silhouette[f.dominantSilh] || 0);
+  /* Only credit the dominant when it's actually dominant (>0), otherwise it's noise */
+  if(f.raw.tone[f.dominantTone] > 0 && p.tone===f.dominantTone) s += 1 + Math.min(toneStrength,3)*0.5;
+  if(f.raw.formality[f.dominantForm] > 0 && p.formality===f.dominantForm) s += 1.5 + Math.min(formStrength,3)*0.5;
+  if(f.raw.silhouette[f.dominantSilh] > 0 && p.silhouette===f.dominantSilh) s += 1.5 + Math.min(silhStrength,3)*0.4;
+  if(p.brightness===f.dominantBright) s+=0.5;
+  /* Memory: never re-show a left-swiped item */
+  if(swipeLog.some(e=>e.id===p.id && e.dir==='left')) s-=10;
+  /* Slightly down-rank items already shown (right or medium) so phase-2 brings fresh picks */
+  if(swipeLog.some(e=>e.id===p.id && e.dir!=='left')) s-=2;
+  return s;
+}
+function refineQueueAfterBenchmark(){
+  const f=deriveFamilies(buildProfile());
+  const seen=new Set(swipeLog.map(e=>e.id));
+  /* refine WITHIN the active category pool so results stay category-faithful */
+  const pool=(activePool.length?activePool:catalog.filter(inDept)).filter(p=>!seen.has(p.id));
+  pool.sort((a,b)=>scoreProduct(b,f)-scoreProduct(a,f));
+  swipeQueue = swipeQueue.slice(0,PHASE1_COUNT).concat(pool.slice(0,PHASE2_COUNT));
+}
+
+/* ==========================================================
+   LEARNING
+   ========================================================== */
+function showLearning(){
+  goTo('learning');
+  const f=deriveFamilies(buildProfile());
+  const list=document.getElementById('learningList');
+  const ins=[];
+  if(f.restraint>0 && f.palette_muted>0) ins.push({l:"Style principle", v:"You like restraint — plain, muted pieces. We'll suggest plain solids in any depth of colour, not just light ones."});
+  else if(f.restraint>0) ins.push({l:"Style principle", v:"You like plain and uncluttered designs over busy ones."});
+  else if(f.raw.pattern.embellished>0||f.raw.pattern.embroidered>0) ins.push({l:"Style principle", v:"You're drawn to detail — embroidery and embellishment."});
+  else ins.push({l:"Style principle", v:"Still forming — a few more swipes would sharpen it."});
+  const liked=swipeLog.filter(e=>e.dir==='right').length;
+  ins.push({l:"Liked so far", v:`${liked} of ${swipeLog.length} swipes`});
+  if(f.dominantTone && f.raw.tone[f.dominantTone]>0) ins.push({l:"Colour family", v:f.dominantTone==='warm'?"warm shades":f.dominantTone==='cool'?"cool shades":"neutral shades"});
+  if(f.dominantForm && f.raw.formality[f.dominantForm]>0) ins.push({l:"Occasion", v:f.dominantForm==='formal'?"Formal & occasion":f.dominantForm==='semi'?"Semi-formal":"Everyday casual"});
+  if(f.dominantSilh) ins.push({l:"Shape", v:f.dominantSilh.replace('-',' ')});
+  const tick=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>`;
+  list.innerHTML=ins.map(s=>`<div>${tick}<span><b>${s.l}:</b> ${s.v}</span></div>`).join('');
+  document.getElementById('learningSub').textContent = session.skippedSwiping
+    ? "You skipped ahead — here's what's popular in this category."
+    : (liked===0 ? "Still learning — try swiping right on more next time." : `From your ${liked} likes, here's the deeper pattern.`);
+  setTimeout(showResults, 2400);
+}
+
+/* ==========================================================
+   RESULTS — category-faithful
+   ========================================================== */
+function showResults(){
+  const f=deriveFamilies(buildProfile());
+  const disliked=new Set(swipeLog.filter(e=>e.dir==='left').map(e=>e.id));
+  /* Results come from the SAME category the user searched, within department */
+  let pool=(activePool.length?activePool:catalog.filter(inDept)).filter(p=>!disliked.has(p.id));
+  const liked=swipeLog.filter(e=>e.dir==='right').length;
+  let best;
+  if(liked===0){
+    /* No taste signal yet (e.g. skipped straight to results) — enforce variety
+       across sellers and sub-styles instead of falling back to raw catalogue order. */
+    best = pickVaried(pool, Math.min(6, pool.length));
+  } else {
+    pool.sort((a,b)=>scoreProduct(b,f)-scoreProduct(a,f));
+    best = pool.slice(0,6);
+  }
+  let summary;
+  const catName = searchHintResult && searchHintResult.root ? searchHintResult.root : "pieces";
+  if(session.skippedSwiping) summary=`Popular ${catName} from verified Lahore sellers. Swipe next time for a personalised set.`;
+  else if(f.restraint>0 && f.palette_muted>0) summary=`You lean toward plain, muted ${catName}. We're showing solids — including darker ones — that share that restraint.`;
+  else if(f.restraint>0) summary=`You lean plain over busy. These ${catName} are uncluttered, across colour depths.`;
+  else if(f.raw.pattern.embellished+f.raw.pattern.embroidered>0) summary=`You're drawn to detail. These ${catName} share the embroidery or embellishment you liked.`;
+  else if(liked>0){ const t=f.dominantTone==='warm'?"warm tones":f.dominantTone==='cool'?"cool tones":"neutral tones"; summary=`You lean toward ${t}. Here's what matched in ${catName}.`; }
+  else summary=`Here's what's popular in ${catName}.`;
+  document.getElementById('resultsSummary').textContent=summary;
+  document.getElementById('resultsTitle').textContent = session.skippedSwiping?`Popular in ${catName}`:`Based on your ${liked} likes`;
+  document.getElementById('resultsHeading').textContent = searchHintResult && searchHintResult.root ? `Best ${searchHintResult.root} for you` : "Picked from your taste";
+  document.getElementById('resultsEchoCount').textContent=best.length;
+  const grid=document.getElementById('resultsGrid');
+  grid.innerHTML=best.map((p,i)=>{
+    const pct=Math.max(70,96-i*5);
+    return `<div class="result-card" onclick="openProduct(${p.id})">
+      <div class="result-art" style="background:${p.accent}1a"><div class="match">${pct}% match</div>${dressSVG(p,false)}</div>
+      <div class="result-info"><p>${p.name}</p><span>${p.seller}</span><span class="rprice">${p.price}</span></div></div>`;
+  }).join('');
+  goTo('results');
+  setTimeout(()=>triggerPulse('after_results'),1400);
+}
+
+/* ==========================================================
+   PRODUCT + MORE LIKE THIS
+   ========================================================== */
+let activeProduct=null;
+function openProduct(id){
+  activeProduct=catalog.find(p=>p.id===id); if(!activeProduct) return;
+  session.productsOpened.push({id, name:activeProduct.name, at:Date.now()});
+  document.getElementById('pdName').textContent=activeProduct.name;
+  const deptLabel = activeProduct.dept === 'men' ? 'For Men' : 'For Women';
+  document.getElementById('pdMeta').textContent= deptLabel + ' · ' + activeProduct.meta+' · S to XL';
+  document.getElementById('pdPrice').textContent=activeProduct.price;
+  document.getElementById('pdSeller').textContent=activeProduct.seller;
+  document.getElementById('pdRating').textContent='★ '+activeProduct.rating;
+  document.querySelector('.pd-seller-right div').textContent=activeProduct.sales+' sales';
+  document.getElementById('pdArtFrame').innerHTML=dressSVG(activeProduct,false);
+  document.getElementById('pdArtFrame').style.background=activeProduct.accent+'1a';
+  document.getElementById('tryonLabel').textContent='See it on me';
+  document.getElementById('tryonBtn').disabled=false;
+  document.getElementById('pdTag').style.display='none';
+  renderMoreLikeThis(activeProduct);
+  goTo('product');
+}
+function renderMoreLikeThis(base){
+  const scored=catalog.filter(p=>p.id!==base.id && p.dept===base.dept).map(p=>{
+    let s=0, why=[];
+    if(p.seller===base.seller){s+=3; why.push('same seller');}
+    if(p.silhouette===base.silhouette){s+=2; why.push('similar cut');}
+    if(p.pattern===base.pattern){s+=2; why.push('similar detailing');}
+    if(p.tone===base.tone){s+=1; why.push('similar tone');}
+    if(p.cat.some(c=>base.cat.includes(c))){s+=1.5; why.push('same category');}
+    return {p,s,why:why[0]||'related'};
+  });
+  scored.sort((a,b)=>b.s-a.s);
+  document.getElementById('moreScroll').innerHTML=scored.slice(0,7).map(({p,why})=>`
+    <div class="more-card" onclick="moreLikeThisClick(${p.id})">
+      <div class="more-art" style="background:${p.accent}1a">${dressSVG(p,false)}</div>
+      <div class="more-info"><p>${p.name}</p><span>${p.price}</span><span class="more-why">${why}</span></div>
+    </div>`).join('');
+}
+function moreLikeThisClick(id){ session.moreLikeThisClicks++; openProduct(id); }
+function goToOrderIntent(){ alert("In the real app this opens the seller's WhatsApp to place the order."); goTo('feedback'); }
+function runTryOn(){
+  if(!activeProduct) return;
+  const btn=document.getElementById('tryonBtn'); btn.disabled=true;
+  document.getElementById('pdLoading').classList.add('on');
+  setTimeout(()=>{
+    document.getElementById('pdArtFrame').innerHTML=dressSVG(activeProduct,true);
+    document.getElementById('pdLoading').classList.remove('on');
+    document.getElementById('tryonLabel').textContent='Try another size';
+    document.getElementById('pdTag').style.display='block';
+    btn.disabled=false; session.tryOnsRun++;
+    setTimeout(()=>triggerPulse('after_tryon'),900);
+  },1400);
+}
+
+/* ==========================================================
+   PULSES + FEEDBACK
+   ========================================================== */
+const pulseDefs={
+  after_phase1:{ text:"Quick one — do these first 3 feel close to your style?", options:[{e:"😍",l:"Spot on"},{e:"🙂",l:"Sort of"},{e:"😕",l:"Not really"}] },
+  after_results:{ text:"Be honest — do these results feel personal, or random?", options:[{e:"🎯",l:"Personal"},{e:"😐",l:"So-so"},{e:"🎲",l:"Random"}] },
+  after_tryon:{ text:"How did seeing it on you feel?", options:[{e:"😄",l:"Helpful"},{e:"😬",l:"Weird"},{e:"🤷",l:"Didn't care"}] },
+};
+function triggerPulse(key){
+  if(session.pulseShown.has(key)) return;
+  session.pulseShown.add(key);
+  const def=pulseDefs[key]; if(!def) return;
+  document.getElementById('reactionPulseText').textContent=def.text;
+  document.getElementById('reactionRow').innerHTML=def.options.map(o=>`<button onclick="answerPulse('${key}','${o.l}')"><span>${o.e}</span>${o.l}</button>`).join('');
+  setTimeout(()=>document.getElementById('reactionPulse').classList.add('on'),500);
+}
+function answerPulse(m,a){ session.pulseResponses.push({moment:m,answer:a,at:Date.now()}); dismissPulse(); }
+function dismissPulse(){ document.getElementById('reactionPulse').classList.remove('on'); }
+function fbSelect(field,val,btn){ session.exitSurvey[field]=val; btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel')); btn.classList.add('sel'); }
+function fbChip(field,val,el){ session.exitSurvey[field]=val; el.parentElement.querySelectorAll('.fb-chip').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); }
+function submitFeedback(){ session.exitSurvey.notes=document.getElementById('fbNotes').value; goTo('thanks'); }
+function toggleDataPanel(){ const p=document.getElementById('dataPanel'); p.classList.toggle('on'); if(p.classList.contains('on')) renderDataPanel(); }
+function renderDataPanel(){
+  const p=document.getElementById('dataPanel');
+  const dur=Math.round((Date.now()-session.startedAt)/1000);
+  const liked=swipeLog.filter(e=>e.dir==='right').length;
+  const f=deriveFamilies(buildProfile());
+  p.innerHTML=`
+    <div><b>Session:</b> ${dur}s</div>
+    <div><b>Searches:</b> ${session.searches.map(s=>s.term).join(', ')||'—'}</div>
+    <div><b>Vague search:</b> ${session.vagueSearchUsed?'yes (category discovery)':'no'}</div>
+    <div><b>Skipped swiping:</b> ${session.skippedSwiping?'yes':'no'}</div>
+    <div><b>Swipes:</b> ${swipeLog.length} · ${liked} liked</div>
+    <div><b>Taste read:</b> restraint=${f.restraint}, muted=${f.palette_muted}, tone=${f.dominantTone}, form=${f.dominantForm}, shape=${f.dominantSilh}</div>
+    <div><b>Products opened:</b> ${session.productsOpened.length}</div>
+    <div><b>More-like-this clicks:</b> ${session.moreLikeThisClicks}</div>
+    <div><b>Try-ons:</b> ${session.tryOnsRun}</div>
+    <div><b>In-flow reactions:</b> ${session.pulseResponses.map(r=>r.moment.replace('after_','')+': '+r.answer).join(' · ')||'none'}</div>
+    <div><b>Understood (1-5):</b> ${session.exitSurvey.understood??'skipped'}</div>
+    <div><b>Variety:</b> ${session.exitSurvey.variety??'skipped'}</div>
+    <div><b>Upload photo:</b> ${session.exitSurvey.tryon??'skipped'}</div>
+    <div><b>Trust purchase:</b> ${session.exitSurvey.trust??'skipped'}</div>
+    <div><b>Notes:</b> ${session.exitSurvey.notes||'—'}</div>`;
+}
+function restartAll(){
+  session.startedAt=Date.now(); session.searches=[]; session.vagueSearchUsed=false; session.swipes=[];
+  session.productsOpened=[]; session.tryOnsRun=0; session.moreLikeThisClicks=0; session.skippedSwiping=false;
+  session.pulseShown=new Set(); session.pulseResponses=[];
+  session.exitSurvey={ understood:null, variety:null, tryon:null, trust:null, notes:"" };
+  swipeLog=[]; document.getElementById('fbNotes').value='';
+  document.querySelectorAll('.fb-chip.sel, .fb-scale button.sel').forEach(e=>e.classList.remove('sel'));
+  goTo('home');
+}
+
+/* NAV */
+function goTo(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+name).classList.add('active');
+  window.scrollTo(0,0);
+}
+document.addEventListener('click', e=>{
+  const wrap=document.querySelector('.search-wrap');
+  if(wrap && !wrap.contains(e.target)){
+    document.getElementById('acBox')?.classList.remove('on');
+    document.getElementById('searchShell')?.classList.remove('has-suggest');
+  }
+});
+
+renderCategoryChips();
+</script>
+</body>
+</html>
