@@ -1,0 +1,647 @@
+// Trylo.pk data model.
+//
+// Source of truth: Trylo_Technical_Specification.md (Section 11 entity list, plus the
+// constraints in CLAUDE.md). This schema deliberately encodes several non-negotiable
+// product constraints AT THE DATABASE LEVEL so later code can't violate them by accident:
+//
+//   * Product.department is REQUIRED and explicit (never inferred at query time).
+//   * Taxonomy lives in editable tables (RootCategory / SubStyle), NOT enums in code.
+//   * Products support a multi-photo gallery; a listing can be blocked from going live
+//     until real seller photos exist (status + image relation).
+//   * SwipeEvent stores direction (LEFT/RIGHT/UP) and a computed weight; UP ("maybe") is
+//     modeled as a positive-by-design signal (see SwipeDirection doc + scoring milestone).
+//   * Order and Dispute are photo-ready now (packaging-proof + dispute evidence) so the
+//     later post-purchase trust features need no migration.
+//   * Money is stored as integer minor units (paisa); commission is never hardcoded here.
+//   * Behavioural signal capture is modeled generically so future IMPLICIT signals
+//     (dwell time, scroll-back) can be added without reshaping existing tables.
+//
+// Attribute storage (founder-confirmed hybrid): the nine UNIVERSAL scoring attributes the
+// recommendation engine reads are typed columns on Product; category-specific extras that
+// do NOT feed scoring live in the flexible `attributesExtra` JSON column, so adding a new
+// garment category later doesn't require a migration.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// Enums
+// ============================================================================
+
+/// Department is set explicitly per product (never inferred). Drives full
+/// cross-department isolation across search, swipe, results, and "more like this".
+enum Department {
+  WOMEN
+  MEN
+}
+
+// --- Product surface attributes (Layer 1, spec Section 6) -------------------
+// These are the universal, scoring-relevant attributes. Kept as typed enums so the
+// recommendation engine reads a stable, validated vocabulary.
+
+enum Pattern {
+  PLAIN
+  PRINTED
+  EMBROIDERED
+  EMBELLISHED
+}
+
+enum Tone {
+  WARM
+  COOL
+  NEUTRAL
+}
+
+enum Brightness {
+  LIGHT
+  MID
+  DARK
+}
+
+enum Saturation {
+  MUTED
+  BRIGHT
+}
+
+enum Formality {
+  CASUAL
+  SEMI_FORMAL
+  FORMAL
+}
+
+enum Coverage {
+  MODEST
+  FULL
+}
+
+enum Cut {
+  FITTED
+  FLOWY
+  STRAIGHT
+}
+
+enum ProductStatus {
+  DRAFT
+  LIVE
+  SUSPENDED
+}
+
+/// Front is the primary listing photo; others are optional gallery angles.
+enum ProductImageKind {
+  FRONT
+  BACK
+  DETAIL
+  FABRIC
+  OTHER
+}
+
+// --- Seller verification (Gate 1, spec Section 2) ---------------------------
+
+enum VerificationStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// --- Swipe / discovery (spec Sections 5 & 6) --------------------------------
+
+/// RIGHT = strong positive (full weight), LEFT = negative,
+/// UP = "maybe" — a REDUCED-WEIGHT POSITIVE signal (never treated as a dislike).
+enum SwipeDirection {
+  LEFT
+  RIGHT
+  UP
+}
+
+/// BENCHMARK = Phase 1 (weighted 2x), CONFIRMATION = Phase 2 (weighted 1x).
+enum SwipePhase {
+  BENCHMARK
+  CONFIRMATION
+}
+
+/// Generic interaction log. v1 uses the explicit kinds; implicit kinds (dwell, scroll-back,
+/// zoom) can be appended later without a schema change (see spec Section 6).
+enum InteractionKind {
+  PRODUCT_OPEN
+  MORE_LIKE_THIS_CLICK
+  TRY_ON_USED
+  ORDER_INTENT_CLICK
+  DEPARTMENT_SWITCH
+  SKIP_TO_RESULTS
+}
+
+// --- Orders & post-purchase trust (spec Section 9) --------------------------
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+/// A payment-status timeline exists for both buyer refunds and seller payouts.
+enum PaymentFlow {
+  REFUND
+  PAYOUT
+}
+
+/// Spec Section 9.2: Requested -> Under Review -> Approved -> Paid (with timestamps).
+enum PaymentStage {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  PAID
+  REJECTED
+}
+
+enum DisputeType {
+  WRONG_ITEM
+  DAMAGED
+  NOT_DELIVERED
+  REFUND_DELAY
+  OTHER
+}
+
+enum DisputeStage {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+// --- Feedback instrumentation (spec Section 10) -----------------------------
+
+enum FeedbackKind {
+  REACTION_PULSE
+  EXIT_SURVEY
+}
+
+/// Where in the flow a reaction pulse fired (exit survey uses SESSION_EXIT).
+enum FeedbackContext {
+  AFTER_BENCHMARK
+  AFTER_RESULTS
+  AFTER_TRY_ON
+  SESSION_EXIT
+}
+
+// ============================================================================
+// Identity: User & Seller
+// ============================================================================
+
+/// A single account table. A user is a buyer by default and becomes a seller by
+/// completing Gate 1 (the optional linked Seller record). Buyer/seller/both — spec 11.
+model User {
+  id           String  @id @default(uuid())
+  email        String? @unique
+  phone        String? @unique
+  passwordHash String?
+  fullName     String?
+
+  /// Last-used department preference (not exclusive) — spec Section 11.
+  lastDepartment Department?
+
+  // --- Try-on photo: opt-in only, never default-stored (spec Section 7 privacy) ---
+  /// Saved try-on photo, ONLY present when the user explicitly opted in.
+  savedTryOnPhotoUrl     String?
+  /// Explicit, unchecked-by-default consent to remember the try-on photo.
+  savedTryOnPhotoConsent Boolean @default(false)
+
+  seller          Seller?
+  sessions        Session[]
+  swipeEvents     SwipeEvent[]
+  interactions    InteractionEvent[]
+  ordersAsBuyer   Order[]            @relation("BuyerOrders")
+  reviewsAuthored Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// Seller profile + the two-gate trust architecture (spec Section 2).
+model Seller {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  businessName String
+  /// Free-text location for v1 (Lahore). Structured address can be normalized later.
+  location     String?
+  addressLine  String?
+
+  // --- Gate 1: one-time verification (spec Section 2) ---
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  cnicNumber         String?
+  cnicDocumentUrl    String?
+  businessProofUrl   String?
+  phoneVerified      Boolean            @default(false)
+  verifiedAt         DateTime?
+
+  // --- Gate 2: ongoing reputation metrics (spec Section 2) ---
+  // Cached aggregates that influence ranking; recomputed as reviews/orders flow in.
+  ratingAverage      Decimal  @default(0) @db.Decimal(3, 2)
+  ratingCount        Int      @default(0)
+  salesCount         Int      @default(0)
+  avgResponseMinutes Int?
+  returnRate         Decimal? @db.Decimal(5, 4)
+  disputeCount       Int      @default(0)
+
+  products        Product[]
+  ordersAsSeller  Order[]   @relation("SellerOrders")
+  reviewsReceived Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("sellers")
+}
+
+// ============================================================================
+// Taxonomy (editable tables — never hardcoded enums; spec Section 4)
+// ============================================================================
+
+/// Broad root category, scoped to a department. "shoes" can exist twice (one per
+/// department) each with its own sub-styles. Unique per (department, slug).
+model RootCategory {
+  id         String     @id @default(uuid())
+  department Department
+  name       String
+  slug       String
+  /// Optional default department hint for listing UX (overridable per product).
+  displayOrder Int       @default(0)
+  isActive     Boolean   @default(true)
+
+  subStyles SubStyle[]
+  products  Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([department, slug])
+  @@map("root_categories")
+}
+
+/// Specific sub-style within a root category (e.g. "formal abaya"). Editable.
+model SubStyle {
+  id             String       @id @default(uuid())
+  rootCategoryId String
+  rootCategory   RootCategory @relation(fields: [rootCategoryId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  displayOrder   Int          @default(0)
+  isActive       Boolean      @default(true)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([rootCategoryId, slug])
+  @@map("sub_styles")
+}
+
+// ============================================================================
+// Product
+// ============================================================================
+
+model Product {
+  id       String @id @default(uuid())
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  /// REQUIRED, explicit — drives cross-department isolation (spec Section 3).
+  department Department
+
+  rootCategoryId String
+  rootCategory   RootCategory @relation(fields: [rootCategoryId], references: [id])
+  subStyleId     String?
+  subStyle       SubStyle?    @relation(fields: [subStyleId], references: [id])
+
+  title       String
+  description String?
+
+  // --- Pricing: integer minor units (paisa) to avoid float rounding bugs ---
+  priceMinor Int
+  currency   String @default("PKR")
+
+  // --- Layer 1 universal scoring attributes (founder-confirmed: typed columns) ---
+  pattern    Pattern
+  tone       Tone
+  brightness Brightness
+  saturation Saturation
+  formality  Formality
+  coverage   Coverage
+  cut        Cut
+  /// Silhouette is category-specific; kept as a typed string (a scoring input, but its
+  /// allowed values vary by category so a fixed enum would be wrong).
+  silhouette String
+
+  // --- Category-specific extras that do NOT feed scoring (hybrid JSON column) ---
+  /// e.g. shoe size system, sherwani-specific cut details. Adding a new garment
+  /// category's extra fields here needs NO migration.
+  attributesExtra Json?
+
+  status ProductStatus @default(DRAFT)
+
+  images   ProductImage[]
+  variants ProductVariant[]
+
+  swipeEvents  SwipeEvent[]
+  interactions InteractionEvent[]
+  orderItems   OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([department, rootCategoryId])
+  @@index([sellerId])
+  @@map("products")
+}
+
+/// Multi-photo gallery (spec Section 8). A product with zero images cannot go LIVE —
+/// enforced in application logic; an empty gallery means "photos coming soon".
+model ProductImage {
+  id        String           @id @default(uuid())
+  productId String
+  product   Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  kind      ProductImageKind @default(FRONT)
+  sortOrder Int              @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("product_images")
+}
+
+/// Per-size stock. "stock/size info" from spec Section 11.
+model ProductVariant {
+  id        String  @id @default(uuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Size label as the seller defines it (e.g. "S", "M", "40", "Free Size").
+  size      String
+  stockQty  Int     @default(0)
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([productId, size])
+  @@map("product_variants")
+}
+
+// ============================================================================
+// Discovery: Session, SwipeEvent, InteractionEvent, SearchQuery
+// ============================================================================
+
+/// Groups swipe events, searches, department, and feedback for analytics (spec 10/11).
+/// userId is nullable to allow pre-auth / anonymous test sessions.
+model Session {
+  id         String     @id @default(uuid())
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  department Department
+  /// True when the user used skip-to-results instead of swiping (spec Section 5).
+  skippedSwiping Boolean @default(false)
+
+  swipeEvents    SwipeEvent[]
+  interactions   InteractionEvent[]
+  searchQueries  SearchQuery[]
+  feedbackEvents FeedbackEvent[]
+
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+/// One search attempt: raw input + resolved category + whether a fuzzy/typo correction
+/// occurred (spec Section 10 analytics). Stores resolution outcome, not the search engine.
+model SearchQuery {
+  id        String  @id @default(uuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  rawInput            String
+  resolvedRootId      String?
+  resolvedSubStyleId  String?
+  /// True when the input was typo-corrected to the resolved category.
+  fuzzyCorrected      Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("search_queries")
+}
+
+/// One swipe. Weight is computed and stored (phase x gesture); UP is positive-by-design.
+model SwipeEvent {
+  id        String         @id @default(uuid())
+  sessionId String
+  session   Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  direction SwipeDirection
+  phase     SwipePhase
+  /// Precomputed scoring weight for this swipe (e.g. benchmark=2, confirmation=1,
+  /// up-swipe = half of phase weight, still POSITIVE). Stored so analytics and the
+  /// scoring engine read a single consistent value.
+  weight    Decimal        @db.Decimal(4, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([userId])
+  @@index([productId])
+  @@map("swipe_events")
+}
+
+/// Non-swipe behavioural events (explicit now; architected for implicit signals later).
+model InteractionEvent {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Optional — some events (e.g. DEPARTMENT_SWITCH) aren't tied to a product.
+  productId String?
+  product   Product?        @relation(fields: [productId], references: [id], onDelete: SetNull)
+  kind      InteractionKind
+  /// Flexible payload for event-specific detail (e.g. switched-to department).
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@index([productId])
+  @@map("interaction_events")
+}
+
+// ============================================================================
+// Orders & post-purchase trust
+// ============================================================================
+
+model Order {
+  id       String @id @default(uuid())
+  buyerId  String
+  buyer    User   @relation("BuyerOrders", fields: [buyerId], references: [id])
+  sellerId String
+  seller   Seller @relation("SellerOrders", fields: [sellerId], references: [id])
+
+  status     OrderStatus @default(PENDING)
+  totalMinor Int
+  currency   String      @default("PKR")
+
+  /// Packaging-proof photo: seller photographs packed contents before sealing
+  /// (spec Section 9.1). Attached to the order, visible to the buyer.
+  packagingProofPhotoUrl String?
+
+  items          OrderItem[]
+  paymentEvents  PaymentStatusEvent[]
+  dispute        Dispute?
+  review         Review?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String          @id @default(uuid())
+  orderId   String
+  order     Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product         @relation(fields: [productId], references: [id])
+  variantId String?
+  variant   ProductVariant? @relation(fields: [variantId], references: [id])
+
+  quantity       Int @default(1)
+  unitPriceMinor Int
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+/// Visible status timeline for refunds and payouts (spec Section 9.2) — append-only.
+model PaymentStatusEvent {
+  id      String       @id @default(uuid())
+  orderId String
+  order   Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  flow    PaymentFlow
+  stage   PaymentStage
+  note    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@map("payment_status_events")
+}
+
+/// Dispute record — photo-ready now so AI mismatch verification can be added later
+/// without a migration (spec Section 9.3).
+model Dispute {
+  id      String      @id @default(uuid())
+  orderId String      @unique
+  order   Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  type    DisputeType
+  stage   DisputeStage @default(OPEN)
+  description String?
+
+  evidence     DisputeEvidence[]
+  statusEvents DisputeStatusEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("disputes")
+}
+
+model DisputeEvidence {
+  id        String  @id @default(uuid())
+  disputeId String
+  dispute   Dispute @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  photoUrl  String
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
+  @@map("dispute_evidence")
+}
+
+model DisputeStatusEvent {
+  id        String       @id @default(uuid())
+  disputeId String
+  dispute   Dispute      @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  stage     DisputeStage
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  @@index([disputeId])
+  @@map("dispute_status_events")
+}
+
+// ============================================================================
+// Reviews / Ratings (feed Gate 2 reputation)
+// ============================================================================
+
+model Review {
+  id       String @id @default(uuid())
+  orderId  String @unique
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  buyerId  String
+  buyer    User   @relation(fields: [buyerId], references: [id])
+  sellerId String
+  seller   Seller @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+
+  /// 1-5; enforced in application logic.
+  score Int
+  text  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sellerId])
+  @@map("reviews")
+}
+
+// ============================================================================
+// Feedback instrumentation (spec Section 10)
+// ============================================================================
+
+/// Reaction pulses and exit-survey responses, linked to a session. The flexible `response`
+/// JSON holds the per-prompt answers (exit survey supports free-text in Urdu & English).
+model FeedbackEvent {
+  id        String          @id @default(uuid())
+  sessionId String
+  session   Session         @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  kind      FeedbackKind
+  context   FeedbackContext
+  response  Json
+
+  createdAt DateTime @default(now())
+
+  @@index([sessionId])
+  @@map("feedback_events")
+}
