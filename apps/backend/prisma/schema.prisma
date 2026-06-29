@@ -207,6 +207,9 @@ model User {
   passwordHash String?
   fullName     String?
 
+  /// Grants access to /admin/* endpoints. Set manually in DB or via a bootstrap script.
+  isAdmin Boolean @default(false)
+
   /// Last-used department preference (not exclusive) — spec Section 11.
   lastDepartment Department?
 
@@ -644,4 +647,24 @@ model FeedbackEvent {
 
   @@index([sessionId])
   @@map("feedback_events")
+}
+
+// ============================================================================
+// OTP verification (phone Gate 1 — auth milestone)
+// ============================================================================
+
+/// Short-lived OTP codes for phone verification during seller Gate 1 onboarding.
+/// Stored in DB (not in-memory) so they survive restarts and are auditable.
+/// Codes expire after 10 minutes; usedAt is set when successfully consumed.
+model OtpVerification {
+  id        String    @id @default(uuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@map("otp_verifications")
 }
