@@ -15,6 +15,7 @@ import {
   Tone,
 } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { RecommendationService } from '../recommendations/recommendation.service';
 import { AuthUser } from '../../auth/decorators/current-user.decorator';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { RecordSwipeDto } from './dto/record-swipe.dto';
@@ -53,7 +54,10 @@ const PRODUCT_INCLUDES = {
 
 @Injectable()
 export class SessionsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly rec: RecommendationService,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Start a new session
@@ -226,10 +230,10 @@ export class SessionsService {
   }
 
   // ---------------------------------------------------------------------------
-  // Results — lightweight recommendation preview (full engine is Milestone 6)
+  // Results — powered by the recommendation/scoring engine (Milestone 6)
   //
-  // CLAUSE.md constraint #4: when there is no signal, enforce variety.
-  // CLAUSE.md constraint #5: seller identity always included.
+  // CLAUDE.md constraint #4: when there is no signal, enforce variety.
+  // CLAUDE.md constraint #5: seller identity always included.
   // ---------------------------------------------------------------------------
 
   async getResults(user: AuthUser, sessionId: string) {
@@ -243,30 +247,28 @@ export class SessionsService {
 
     const swipes = await this.prisma.swipeEvent.findMany({
       where: { sessionId },
-      include: { product: true },
       orderBy: { createdAt: 'asc' },
     });
 
     const seenIds = swipes.map((s) => s.productId);
 
-    // If skipped or no positive swipes: variety-enforced defaults (constraint #4).
-    const positiveSwipes = swipes.filter(
-      (s) => s.direction === SwipeDirection.RIGHT || s.direction === SwipeDirection.UP,
-    );
-
-    let products;
-    if (positiveSwipes.length === 0 || session.skippedSwiping) {
-      products = await this.varietyFallback(session.department, seenIds, 20);
-    } else {
-      products = await this.buildResults(session.department, positiveSwipes, seenIds, 20);
-    }
+    // Delegate to the scoring engine — it handles the no-signal variety fallback.
+    const result = await this.rec.recommend({
+      userId: user.id,
+      department: session.department,
+      sessionId,
+      excludeIds: seenIds,
+      limit: 20,
+    });
 
     return {
       sessionId,
       department: session.department,
       basedOnSwipes: swipes.length,
       skipped: session.skippedSwiping,
-      items: products,
+      tasteProfile: result.profile,
+      usedFallback: result.usedFallback ?? false,
+      items: result.items,
     };
   }
 
@@ -383,101 +385,6 @@ export class SessionsService {
       include: PRODUCT_INCLUDES,
       orderBy: { createdAt: 'desc' },
     });
-  }
-
-  // ---------------------------------------------------------------------------
-  // Results building
-  // ---------------------------------------------------------------------------
-
-  private async buildResults(
-    department: Department,
-    positiveSwipes: Array<{ weight: Prisma.Decimal; product: { pattern: string; tone: string; brightness: string; saturation: string; formality: string; coverage: string; cut: string } }>,
-    excludeIds: string[],
-    limit: number,
-  ) {
-    // Derive liked attributes weighted by swipe weight (heavier RIGHT > lighter UP).
-    const patterns = this.weightedFrequency(positiveSwipes, (s) => s.product.pattern) as Pattern[];
-    const tones = this.weightedFrequency(positiveSwipes, (s) => s.product.tone) as Tone[];
-    const formalities = this.weightedFrequency(positiveSwipes, (s) => s.product.formality) as Formality[];
-
-    const results = await this.prisma.product.findMany({
-      where: {
-        status: ProductStatus.LIVE,
-        department,
-        id: excludeIds.length ? { notIn: excludeIds } : undefined,
-        OR: [
-          { pattern: { in: patterns } },
-          { tone: { in: tones } },
-          { formality: { in: formalities } },
-        ],
-      },
-      include: PRODUCT_INCLUDES,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
-
-    // If not enough matched results, top up with variety fallback.
-    if (results.length < limit) {
-      const topUpIds = [...excludeIds, ...results.map((p) => p.id)];
-      const topUp = await this.varietyFallback(department, topUpIds, limit - results.length);
-      return [...results, ...topUp];
-    }
-
-    return results;
-  }
-
-  private async varietyFallback(department: Department, excludeIds: string[], limit: number) {
-    // Constraint #4: variety-enforced defaults — must spread across sellers and sub-styles,
-    // never dump all results from a single seller at the top.
-    // Strategy: round-robin across sellers — fetch up to ceil(limit/sellerCount) per seller,
-    // then interleave.
-
-    // Get all unique seller IDs that have LIVE products in this department.
-    const sellers = await this.prisma.product.findMany({
-      where: {
-        status: ProductStatus.LIVE,
-        department,
-        id: excludeIds.length ? { notIn: excludeIds } : undefined,
-      },
-      select: { sellerId: true },
-      distinct: ['sellerId'],
-    });
-
-    const sellerIds = sellers.map((s) => s.sellerId);
-    if (sellerIds.length === 0) return [];
-
-    const perSeller = Math.ceil(limit / sellerIds.length);
-
-    // Fetch a slice of products per seller in parallel.
-    const buckets = await Promise.all(
-      sellerIds.map((sellerId) =>
-        this.prisma.product.findMany({
-          where: {
-            status: ProductStatus.LIVE,
-            department,
-            sellerId,
-            id: excludeIds.length ? { notIn: excludeIds } : undefined,
-          },
-          include: PRODUCT_INCLUDES,
-          orderBy: { createdAt: 'desc' },
-          take: perSeller,
-        }),
-      ),
-    );
-
-    // Interleave: take one from each bucket until we hit the limit.
-    const result = [];
-    const maxLen = Math.max(...buckets.map((b) => b.length));
-    outer: for (let i = 0; i < maxLen; i++) {
-      for (const bucket of buckets) {
-        if (bucket[i]) {
-          result.push(bucket[i]);
-          if (result.length >= limit) break outer;
-        }
-      }
-    }
-
-    return result;
   }
 
   // ---------------------------------------------------------------------------
