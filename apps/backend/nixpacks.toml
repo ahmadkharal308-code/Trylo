@@ -1,11 +1,16 @@
 [phases.setup]
 nixPkgs = ["nodejs_20", "openssl"]
 
+# Force dev dependencies even when NODE_ENV=production, otherwise the build tools
+# (@nestjs/cli, typescript) are pruned and `nest build` / `tsc` fail.
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --include=dev"]
 
 [phases.build]
 cmds = ["npx prisma generate", "npm run build"]
 
+# At deploy time: apply migrations, seed pilot data only if the DB is empty
+# (never wipes real data), then start the API. `prisma` is a runtime dependency
+# now, so `npx prisma` resolves the local binary without any network download.
 [start]
-cmd = "npx prisma migrate deploy && node dist/main.js"
+cmd = "npx prisma migrate deploy && npm run seed:if-empty && node dist/main.js"

@@ -3,7 +3,11 @@
   "compilerOptions": {
     "module": "commonjs",
     "moduleResolution": "node",
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "rootDir": "./prisma",
+    "outDir": "./dist/seed",
+    "declaration": false,
+    "incremental": false
   },
-  "include": ["prisma/seed.ts"]
+  "include": ["prisma/seed.ts", "prisma/seed-if-empty.ts"]
 }

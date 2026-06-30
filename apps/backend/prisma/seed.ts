@@ -709,7 +709,7 @@ const MENS_CLOTHING: ProductSeed[] = [
 // Main seed function
 // ---------------------------------------------------------------------------
 
-async function main() {
+export async function seed() {
   console.log('-  Trylo pilot seed  -  starting...');
 
   // Clear in dependency order so FK constraints don't block
@@ -928,6 +928,10 @@ async function main() {
   console.log('      Replace with real seller photos before any public-facing use.');
 }
 
-main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+// Only auto-run when invoked directly (e.g. `npm run db:seed`), not when imported
+// by the seed-if-empty guard used at production startup.
+if (require.main === module) {
+  seed()
+    .catch((e) => { console.error(e); process.exit(1); })
+    .finally(() => prisma.$disconnect());
+}
