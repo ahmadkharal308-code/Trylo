@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { SellersModule } from './modules/sellers/sellers.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ProductsModule } from './modules/products/products.module';
 
 /**
  * Root application module.
@@ -24,6 +25,7 @@ import { AdminModule } from './modules/admin/admin.module';
     AuthModule,
     SellersModule,
     AdminModule,
+    ProductsModule,
   ],
 })
 export class AppModule {}
