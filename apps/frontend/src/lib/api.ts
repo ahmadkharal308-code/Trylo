@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-export const api = axios.create({ baseURL: '/api' });
+// In development the Vite proxy rewrites /api → http://localhost:3000.
+// In production set VITE_API_URL to your Railway backend URL, e.g. https://trylo-api.up.railway.app
+const baseURL = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api';
+export const api = axios.create({ baseURL });
 
 // Attach JWT from localStorage to every request.
 api.interceptors.request.use((config) => {
