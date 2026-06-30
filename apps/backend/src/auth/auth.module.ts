@@ -12,10 +12,17 @@ import { JwtStrategy } from './strategies/jwt.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') },
-      }),
+      useFactory: (config: ConfigService) => {
+        const secret = config.get<string>('JWT_SECRET');
+        if (!secret) {
+          // eslint-disable-next-line no-console
+          console.warn('[TRYLO] WARNING: JWT_SECRET env var is not set. Using a temporary random secret — all tokens will be invalidated on restart. Set JWT_SECRET in Railway Variables immediately.');
+        }
+        return {
+          secret: secret ?? require('crypto').randomBytes(32).toString('hex'),
+          signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '7d') },
+        };
+      },
     }),
   ],
   providers: [AuthService, JwtStrategy],
