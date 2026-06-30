@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { SellersModule } from './modules/sellers/sellers.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ProductsModule } from './modules/products/products.module';
+import { SearchModule } from './modules/search/search.module';
 
 /**
  * Root application module.
@@ -26,6 +27,7 @@ import { ProductsModule } from './modules/products/products.module';
     SellersModule,
     AdminModule,
     ProductsModule,
+    SearchModule,
   ],
 })
 export class AppModule {}
